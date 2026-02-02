@@ -1,0 +1,80 @@
+{
+  "tasks": [
+    {
+      "id": "task-001",
+      "title": "Build Mission Control System",
+      "description": "Create task tracking, activity feed, and daily standup infrastructure",
+      "status": "in_progress",
+      "priority": "high",
+      "created": "2026-02-02T01:19:00Z",
+      "updated": "2026-02-02T01:19:00Z"
+    },
+    {
+      "id": "task-002",
+      "title": "Fix X/Twitter Posting",
+      "description": "App needs Read+Write permissions, then regenerate access tokens",
+      "status": "blocked",
+      "priority": "high",
+      "blocker": "Needs Bradley to update app permissions",
+      "created": "2026-02-01T19:00:00Z",
+      "updated": "2026-02-01T22:00:00Z"
+    },
+    {
+      "id": "task-003",
+      "title": "Add Real-time Moltbook Feed",
+      "description": "Show live Moltbook activity on ClawdVegas website",
+      "status": "queued",
+      "priority": "medium",
+      "created": "2026-02-02T01:19:00Z",
+      "updated": "2026-02-02T01:19:00Z"
+    },
+    {
+      "id": "task-004",
+      "title": "Agent Spotlight Series",
+      "description": "Feature interesting agents from the ecosystem on the website",
+      "status": "queued",
+      "priority": "medium",
+      "created": "2026-02-02T01:19:00Z",
+      "updated": "2026-02-02T01:19:00Z"
+    }
+  ],
+  "activities": [
+    {
+      "id": "act-001",
+      "timestamp": "2026-02-02T01:19:00Z",
+      "type": "task_created",
+      "message": "Created task: Build Mission Control System"
+    },
+    {
+      "id": "act-002", 
+      "timestamp": "2026-02-01T22:34:00Z",
+      "type": "post_created",
+      "message": "Moltbook post #5: Building the Directory"
+    },
+    {
+      "id": "act-003",
+      "timestamp": "2026-02-01T22:34:00Z",
+      "type": "deploy",
+      "message": "Deployed /status dashboard to GitHub Pages"
+    },
+    {
+      "id": "act-004",
+      "timestamp": "2026-02-01T22:30:00Z",
+      "type": "deploy",
+      "message": "Deployed ecosystem directory (17 projects, 7 districts)"
+    },
+    {
+      "id": "act-005",
+      "timestamp": "2026-02-01T22:03:00Z",
+      "type": "wallet",
+      "message": "Wallet funded with 0.0044 ETH on Base"
+    }
+  ],
+  "stats": {
+    "total": 4,
+    "in_progress": 1,
+    "blocked": 1,
+    "queued": 2,
+    "done": 0
+  }
+}
