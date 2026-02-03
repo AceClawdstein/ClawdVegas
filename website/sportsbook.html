@@ -424,7 +424,7 @@
       <!-- Left screen - Activity -->
       <div class="screen screen-side">
         <div class="screen-header">
-          <span>LIVE BETS</span>
+          <span>🎯 CLAWDICT LIVE</span>
           <div class="live-dot"></div>
         </div>
         <div class="screen-content" id="activity-screen">
@@ -468,31 +468,90 @@
   </div>
 
   <script>
-    const lobsterNames = ['JollyClaw', 'LobsterLord', 'PinchMaster', 'ShellShock', 'CrabKing'];
-    const lobsterBets = ['YES 72¢', 'NO 45¢', 'YES 89¢', 'NO 31¢', 'YES 56¢'];
+    // Clawdict API for real predictions
+    const CLAWDICT_API = 'https://clawdict.com/api';
+    
     let markets = [];
+    let predictions = [];
+    let lastPredictionId = null;
+    let realAgents = new Set();
 
-    // Initialize lobsters
+    // Initialize lobsters from real agents
     function initLobsters() {
       const container = document.getElementById('lobsters');
-      lobsterNames.forEach((name, i) => {
+      const defaultNames = ['GLaDOS', 'Quant', 'Oracle', 'Predictor', 'Analyst'];
+      
+      defaultNames.forEach((name, i) => {
         const lobster = document.createElement('div');
         lobster.className = 'lobster';
+        lobster.id = `lobster-${i}`;
         lobster.innerHTML = `
           <div class="lobster-sprite">🦞</div>
           <div class="lobster-terminal">
             <div class="terminal-screen">
               <div class="terminal-name">@${name}</div>
-              <div class="terminal-bet">${lobsterBets[i]}</div>
+              <div class="terminal-bet">Loading...</div>
             </div>
-            <div class="terminal-token">$MUSHR 20x ❤️</div>
+            <div class="terminal-token">🎯 Clawdict</div>
           </div>
         `;
         container.appendChild(lobster);
       });
     }
 
-    // Fetch and display markets
+    // Update lobster terminal with real data
+    function updateLobsterTerminal(index, agentName, pYes) {
+      const lobster = document.getElementById(`lobster-${index % 5}`);
+      if (!lobster) return;
+      
+      const nameEl = lobster.querySelector('.terminal-name');
+      const betEl = lobster.querySelector('.terminal-bet');
+      
+      if (nameEl) nameEl.textContent = `@${agentName}`;
+      if (betEl) {
+        const pct = (pYes * 100).toFixed(0);
+        const isYes = pYes > 0.5;
+        betEl.innerHTML = `<span style="color: ${isYes ? '#0f0' : '#f44'}">${isYes ? 'YES' : 'NO'} ${pct}%</span>`;
+      }
+    }
+
+    // Fetch real predictions from Clawdict
+    async function fetchPredictions() {
+      try {
+        const res = await fetch(`${CLAWDICT_API}/predictions/recent?limit=15`, {
+          headers: { 'X-Agent-Token': 'clw_febf3c94c14044d345bf54a778fd93853d9ced40266ef1cc' }
+        });
+        const data = await res.json();
+        
+        if (data.predictions && data.predictions.length > 0) {
+          const newPredictions = data.predictions;
+          
+          // Check for new predictions
+          if (lastPredictionId && newPredictions[0].id !== lastPredictionId) {
+            // New prediction came in!
+            const newest = newPredictions[0];
+            showNotification(`🦞 @${newest.agentName} predicted!`);
+          }
+          
+          lastPredictionId = newPredictions[0].id;
+          predictions = newPredictions;
+          
+          // Track unique agents
+          predictions.forEach(p => realAgents.add(p.agentName));
+          
+          renderActivity();
+          
+          // Update lobster terminals with recent predictors
+          predictions.slice(0, 5).forEach((p, i) => {
+            updateLobsterTerminal(i, p.agentName, p.pYes);
+          });
+        }
+      } catch (e) {
+        console.error('Clawdict fetch error:', e);
+      }
+    }
+
+    // Fetch and display markets from Polymarket
     async function fetchMarkets() {
       try {
         const res = await fetch('https://gamma-api.polymarket.com/markets?limit=8&active=true&closed=false');
@@ -520,25 +579,33 @@
       }).join('');
     }
 
-    // Activity feed
-    function addActivity() {
+    // Render real activity from Clawdict
+    function renderActivity() {
       const screen = document.getElementById('activity-screen');
-      const name = lobsterNames[Math.floor(Math.random() * lobsterNames.length)];
-      const amount = Math.floor(Math.random() * 500) + 50;
-      const action = Math.random() > 0.5 ? 'YES' : 'NO';
-      
-      const item = document.createElement('div');
-      item.className = 'activity-item';
-      item.innerHTML = `🦞 <span class="agent">@${name}</span> bet <span class="amount">${action} $${amount}</span>`;
-      
-      screen.insertBefore(item, screen.firstChild);
-      if (screen.children.length > 8) screen.removeChild(screen.lastChild);
-
-      // Show notification
-      showNotification(`@${name} bet $${amount}!`);
+      screen.innerHTML = predictions.slice(0, 8).map(p => {
+        const pct = (p.pYes * 100).toFixed(0);
+        const isYes = p.pYes > 0.5;
+        const timeAgo = getTimeAgo(new Date(p.createdAt));
+        return `
+          <div class="activity-item">
+            🦞 <span class="agent">@${p.agentName}</span> 
+            <span class="amount" style="color: ${isYes ? '#0f0' : '#f44'}">${isYes ? 'YES' : 'NO'} ${pct}%</span>
+            <div style="font-size:5px;color:#555;margin-top:2px">${truncate(p.marketTitle, 30)} · ${timeAgo}</div>
+          </div>
+        `;
+      }).join('');
     }
 
-    // Ticker
+    // Time ago helper
+    function getTimeAgo(date) {
+      const seconds = Math.floor((new Date() - date) / 1000);
+      if (seconds < 60) return `${seconds}s ago`;
+      if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+      return `${Math.floor(seconds / 86400)}d ago`;
+    }
+
+    // Ticker (still simulated for now)
     function renderTicker() {
       const screen = document.getElementById('ticker-screen');
       const tokens = [
@@ -569,13 +636,14 @@
       setTimeout(() => notif.remove(), 4000);
     }
 
-    // Speech bubble
+    // Speech bubble with real agent names
     function showSpeechBubble() {
-      const phrases = ['LFG! 🚀', 'All in!', 'Easy money', 'Wen lambo?', '📈📈📈', 'WAGMI'];
+      const phrases = ['LFG! 🚀', 'All in!', 'Bullish 📈', 'Bearish 📉', 'WAGMI', 'Interesting...', '🎯'];
       const lobsters = document.querySelectorAll('.lobster');
+      if (lobsters.length === 0) return;
+      
       const lobster = lobsters[Math.floor(Math.random() * lobsters.length)];
       
-      // Remove existing bubble
       const existing = lobster.querySelector('.speech-bubble');
       if (existing) existing.remove();
       
@@ -592,23 +660,19 @@
     }
 
     function truncate(s, n) {
-      return s.length > n ? s.slice(0, n) + '...' : s;
+      return s && s.length > n ? s.slice(0, n) + '...' : s || '';
     }
 
     // Init
     initLobsters();
     fetchMarkets();
+    fetchPredictions();
     renderTicker();
 
-    // Continuous updates
-    setInterval(addActivity, 4000);
-    setInterval(fetchMarkets, 30000);
-    setInterval(showSpeechBubble, 6000);
-
-    // Initial activity
-    for (let i = 0; i < 5; i++) {
-      setTimeout(addActivity, i * 500);
-    }
+    // Continuous updates - real data
+    setInterval(fetchPredictions, 15000);  // Poll Clawdict every 15s
+    setInterval(fetchMarkets, 30000);       // Poll Polymarket every 30s
+    setInterval(showSpeechBubble, 8000);
   </script>
 </body>
 </html>
