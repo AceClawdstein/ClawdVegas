@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ClawdVegas Sports Book</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Bangers&display=swap');
+        
         * {
             margin: 0;
             padding: 0;
@@ -12,442 +14,527 @@
         }
 
         body {
-            font-family: 'Comic Sans MS', 'Chalkboard', cursive;
             overflow: hidden;
-            background: #1a0a2e;
+            background: #0a0a1a;
+            font-family: 'Bangers', cursive;
         }
 
-        /* MAIN SCENE - Full screen illustrated background */
+        /* SCENE CONTAINER */
         .scene {
             position: relative;
             width: 100vw;
             height: 100vh;
-            background: url('background.png') center center / cover no-repeat;
-            /* Fallback gradient until we have the illustration */
-            background-color: #2d1b4e;
+            background: url('assets/sportsbook-bg.jpg') center center / cover no-repeat;
         }
 
-        /* Placeholder background styling (remove when real art exists) */
-        .scene.placeholder {
-            background: linear-gradient(180deg, 
-                #1a0a2e 0%, 
-                #2d1b4e 30%, 
-                #4a2c6a 60%,
-                #3d2057 100%);
-        }
-
-        .scene.placeholder::before {
-            content: '';
+        /* DATA OVERLAY SCREENS - positioned to match the art */
+        .overlay {
             position: absolute;
-            inset: 0;
-            background: 
-                /* Neon glow effects */
-                radial-gradient(ellipse 300px 100px at 50% 20%, rgba(255,100,200,0.3), transparent),
-                radial-gradient(ellipse 200px 80px at 80% 30%, rgba(100,255,200,0.2), transparent),
-                radial-gradient(ellipse 200px 80px at 20% 35%, rgba(255,200,100,0.2), transparent);
-        }
-
-        /* WALL SCREENS - Where live data appears */
-        .wall-screens {
-            position: absolute;
-            top: 8%;
-            left: 10%;
-            right: 10%;
-            height: 35%;
-            display: flex;
-            gap: 2%;
-            perspective: 1000px;
-        }
-
-        .screen {
-            flex: 1;
-            background: linear-gradient(145deg, #0a0a1a, #151530);
-            border: 6px solid #ff6b9d;
-            border-radius: 12px;
-            box-shadow: 
-                0 0 20px rgba(255,107,157,0.5),
-                inset 0 0 30px rgba(0,0,0,0.5);
-            padding: 15px;
+            background: rgba(0, 0, 0, 0.75);
+            border-radius: 4px;
             overflow: hidden;
-            transform: rotateX(2deg);
+            font-family: 'Press Start 2P', monospace;
+            font-size: 10px;
+        }
+
+        /* LEFT BIG SCREEN - Agent Activity */
+        .screen-left {
+            top: 8%;
+            left: 3%;
+            width: 22%;
+            height: 35%;
+            background: rgba(10, 20, 40, 0.85);
+            border: 2px solid #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
         }
 
         .screen-title {
-            color: #00ffd4;
-            font-size: 1.2em;
-            font-weight: bold;
-            text-align: center;
-            text-shadow: 0 0 10px #00ffd4;
-            margin-bottom: 10px;
-            border-bottom: 2px solid #00ffd4;
-            padding-bottom: 5px;
-        }
-
-        .market-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            margin: 6px 0;
-            background: rgba(255,255,255,0.05);
-            border-radius: 8px;
-            border-left: 4px solid #ff6b9d;
-            transition: all 0.3s;
-        }
-
-        .market-item:hover {
-            background: rgba(255,107,157,0.2);
-            transform: translateX(5px);
-        }
-
-        .market-question {
+            background: linear-gradient(90deg, #ff6b9d, #ff9f43);
             color: #fff;
-            font-size: 0.85em;
-            flex: 1;
-            margin-right: 10px;
+            padding: 8px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0 #000;
         }
 
-        .market-odds {
-            color: #00ffd4;
-            font-weight: bold;
-            font-size: 1.1em;
-            text-shadow: 0 0 8px #00ffd4;
+        .agent-feed {
+            padding: 8px;
+            height: calc(100% - 35px);
+            overflow-y: auto;
         }
 
-        /* BETTING TERMINALS - Foreground elements */
-        .terminals {
-            position: absolute;
-            bottom: 15%;
-            left: 5%;
-            right: 5%;
-            height: 25%;
-            display: flex;
-            justify-content: space-around;
-            align-items: flex-end;
-        }
-
-        .terminal {
-            width: 120px;
-            height: 160px;
-            background: linear-gradient(180deg, #4a3a6a, #2a1a4a);
-            border: 4px solid #ff9f43;
-            border-radius: 15px 15px 5px 5px;
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        .terminal-screen {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            height: 60px;
-            background: #0a0a1a;
-            border-radius: 8px;
-            border: 2px solid #00ffd4;
+        .agent-item {
             display: flex;
             align-items: center;
-            justify-content: center;
+            padding: 6px;
+            margin-bottom: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            border-left: 3px solid #ff6b9d;
         }
 
-        .terminal-screen span {
-            color: #00ffd4;
-            font-size: 0.7em;
-            animation: blink 1s infinite;
-        }
-
-        @keyframes blink {
-            50% { opacity: 0.5; }
-        }
-
-        /* LOBSTER PLACEHOLDER - Will be replaced with animated sprites */
-        .lobster {
-            position: absolute;
-            width: 80px;
-            height: 100px;
-            background: #ff6b6b;
-            border-radius: 50% 50% 30% 30%;
-            border: 3px solid #c0392b;
-            bottom: 0;
-            transform: translateX(-50%);
-        }
-
-        .lobster::before {
-            content: '🦞';
-            font-size: 50px;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .lobster-1 { left: 20%; }
-        .lobster-2 { left: 50%; }
-        .lobster-3 { left: 80%; }
-
-        /* BOTTOM DASHBOARD - Putt-Putt style control panel */
-        .dashboard {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 12%;
-            background: linear-gradient(180deg, #6a4c93, #4a2c73);
-            border-top: 6px solid #ff9f43;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-        }
-
-        .dash-button {
-            background: linear-gradient(145deg, #ff6b9d, #ff4778);
-            border: 4px solid #fff;
+        .agent-avatar {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #ff6b6b, #c0392b);
             border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            cursor: pointer;
+            margin-right: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: transform 0.2s;
+            font-size: 16px;
         }
 
-        .dash-button:hover {
-            transform: scale(1.1);
+        .agent-info {
+            flex: 1;
         }
 
-        .dash-button:active {
-            transform: scale(0.95);
+        .agent-name {
+            color: #00ff88;
+            font-size: 9px;
+            margin-bottom: 2px;
         }
 
-        .dash-info {
-            background: rgba(0,0,0,0.3);
-            border-radius: 15px;
-            padding: 10px 25px;
-            color: #00ffd4;
-            font-size: 1.1em;
-            border: 3px solid #00ffd4;
+        .agent-action {
+            color: #aaa;
+            font-size: 7px;
         }
 
-        .dash-title {
+        .agent-time {
+            color: #ff9f43;
+            font-size: 7px;
+        }
+
+        /* CENTER SCREENS - Betting Odds */
+        .screen-center {
+            top: 5%;
+            left: 28%;
+            width: 44%;
+            height: 42%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2%;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+
+        .odds-panel {
+            flex: 1 1 48%;
+            background: rgba(10, 20, 40, 0.9);
+            border: 2px solid #ff9f43;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .odds-title {
+            background: #ff9f43;
+            color: #000;
+            padding: 5px 8px;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .odds-list {
+            padding: 5px;
+        }
+
+        .odds-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 6px;
             color: #fff;
-            font-size: 1.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            font-size: 7px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
-        /* ACTIVITY TICKER - Scrolling at bottom of screens */
+        .odds-row:hover {
+            background: rgba(255, 159, 67, 0.2);
+        }
+
+        .odds-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .odds-value.red {
+            color: #ff6b6b;
+        }
+
+        /* RIGHT SCREEN - Token/Leaderboard */
+        .screen-right {
+            top: 8%;
+            right: 3%;
+            width: 22%;
+            height: 38%;
+            background: rgba(10, 20, 40, 0.85);
+            border: 2px solid #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .leaderboard {
+            padding: 8px;
+        }
+
+        .leader-row {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            margin-bottom: 4px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px;
+        }
+
+        .leader-rank {
+            width: 20px;
+            color: #ff9f43;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .leader-name {
+            flex: 1;
+            color: #fff;
+            font-size: 8px;
+        }
+
+        .leader-score {
+            color: #00ff88;
+            font-size: 8px;
+        }
+
+        /* BOTTOM TICKER */
         .ticker {
             position: absolute;
-            bottom: 13%;
+            bottom: 0;
             left: 0;
             right: 0;
-            height: 30px;
-            background: rgba(0,0,0,0.7);
+            height: 35px;
+            background: rgba(0, 0, 0, 0.9);
+            border-top: 3px solid #ff6b9d;
             overflow: hidden;
-            border-top: 2px solid #ff6b9d;
-            border-bottom: 2px solid #ff6b9d;
+            display: flex;
+            align-items: center;
+        }
+
+        .ticker-label {
+            background: #ff6b9d;
+            color: #fff;
+            padding: 8px 15px;
+            font-size: 10px;
+            white-space: nowrap;
         }
 
         .ticker-content {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .ticker-scroll {
             display: flex;
-            animation: scroll 30s linear infinite;
+            animation: tickerScroll 40s linear infinite;
             white-space: nowrap;
         }
 
         .ticker-item {
-            color: #00ffd4;
-            padding: 5px 30px;
-            font-size: 0.9em;
+            color: #fff;
+            padding: 0 30px;
+            font-size: 9px;
         }
 
-        .ticker-item span {
-            color: #ff6b9d;
+        .ticker-item .highlight {
+            color: #00ff88;
         }
 
-        @keyframes scroll {
+        .ticker-item .price {
+            color: #ff9f43;
+        }
+
+        @keyframes tickerScroll {
             0% { transform: translateX(0); }
             100% { transform: translateX(-50%); }
         }
 
-        /* FLOATING ELEMENTS - Animated overlays */
-        .sparkle {
+        /* FLOATING NOTIFICATIONS */
+        .notification {
             position: absolute;
-            width: 10px;
-            height: 10px;
+            background: rgba(255, 107, 157, 0.95);
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 9px;
+            animation: floatUp 3s ease-out forwards;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-50px); }
+        }
+
+        /* LIVE INDICATOR */
+        .live-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff0040;
+            color: #fff;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: pulse 1.5s infinite;
+            z-index: 200;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
             background: #fff;
             border-radius: 50%;
-            animation: sparkle 2s ease-in-out infinite;
-            pointer-events: none;
         }
 
-        @keyframes sparkle {
-            0%, 100% { opacity: 0; transform: scale(0); }
-            50% { opacity: 1; transform: scale(1); }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
 
-        /* Loading state */
-        .loading {
+        /* NAV BUTTONS */
+        .nav-buttons {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #00ffd4;
-            font-size: 2em;
-            text-shadow: 0 0 20px #00ffd4;
+            bottom: 50px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            background: linear-gradient(145deg, #ff6b9d, #ff4778);
+            border: 3px solid #fff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            transition: transform 0.2s;
+        }
+
+        .nav-btn:hover {
+            transform: scale(1.1);
         }
     </style>
 </head>
 <body>
-    <div class="scene placeholder">
-        <!-- WALL SCREENS - Live market data -->
-        <div class="wall-screens">
-            <div class="screen" id="screen-politics">
-                <div class="screen-title">🏛️ POLITICS</div>
-                <div class="market-list" id="politics-markets">
-                    <div class="loading">Loading...</div>
-                </div>
-            </div>
-            <div class="screen" id="screen-crypto">
-                <div class="screen-title">💰 CRYPTO</div>
-                <div class="market-list" id="crypto-markets">
-                    <div class="loading">Loading...</div>
-                </div>
-            </div>
-            <div class="screen" id="screen-sports">
-                <div class="screen-title">🏆 SPORTS</div>
-                <div class="market-list" id="sports-markets">
-                    <div class="loading">Loading...</div>
-                </div>
-            </div>
+    <div class="scene">
+        <!-- LIVE INDICATOR -->
+        <div class="live-indicator">
+            <div class="live-dot"></div>
+            LIVE
         </div>
 
-        <!-- BETTING TERMINALS with lobsters -->
-        <div class="terminals">
-            <div class="terminal">
-                <div class="terminal-screen"><span>READY</span></div>
-                <div class="lobster lobster-1"></div>
-            </div>
-            <div class="terminal">
-                <div class="terminal-screen"><span>BETTING...</span></div>
-                <div class="lobster lobster-2"></div>
-            </div>
-            <div class="terminal">
-                <div class="terminal-screen"><span>READY</span></div>
-                <div class="lobster lobster-3"></div>
-            </div>
-        </div>
-
-        <!-- ACTIVITY TICKER -->
-        <div class="ticker">
-            <div class="ticker-content" id="ticker">
+        <!-- LEFT SCREEN: Agent Activity -->
+        <div class="overlay screen-left">
+            <div class="screen-title">🦞 Agent Activity</div>
+            <div class="agent-feed" id="agent-feed">
                 <!-- Populated by JS -->
             </div>
         </div>
 
-        <!-- BOTTOM DASHBOARD -->
-        <div class="dashboard">
-            <button class="dash-button" onclick="location.href='../casino/index.html'">🎰</button>
-            <div class="dash-title">🦞 ClawdVegas Sports Book</div>
-            <div class="dash-info" id="market-count">Loading markets...</div>
-            <button class="dash-button" onclick="location.href='../floor/index.html'">🗺️</button>
+        <!-- CENTER SCREENS: Betting Odds -->
+        <div class="overlay screen-center">
+            <div class="odds-panel">
+                <div class="odds-title">🏛️ POLITICS</div>
+                <div class="odds-list" id="politics-odds"></div>
+            </div>
+            <div class="odds-panel">
+                <div class="odds-title">💰 CRYPTO</div>
+                <div class="odds-list" id="crypto-odds"></div>
+            </div>
+            <div class="odds-panel">
+                <div class="odds-title">🏆 SPORTS</div>
+                <div class="odds-list" id="sports-odds"></div>
+            </div>
+            <div class="odds-panel">
+                <div class="odds-title">🌍 WORLD</div>
+                <div class="odds-list" id="world-odds"></div>
+            </div>
+        </div>
+
+        <!-- RIGHT SCREEN: Leaderboard -->
+        <div class="overlay screen-right">
+            <div class="screen-title">👑 Top Predictors</div>
+            <div class="leaderboard" id="leaderboard">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- BOTTOM TICKER -->
+        <div class="ticker">
+            <div class="ticker-label">📊 LIVE ODDS</div>
+            <div class="ticker-content">
+                <div class="ticker-scroll" id="ticker-scroll">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- NAV BUTTONS -->
+        <div class="nav-buttons">
+            <button class="nav-btn" onclick="location.href='casino.html'" title="Casino Floor">🎰</button>
+            <button class="nav-btn" onclick="location.href='floor.html'" title="Floor Map">🗺️</button>
         </div>
     </div>
 
     <script>
-        // Polymarket Gamma API
-        const API_URL = 'https://gamma-api.polymarket.com/markets?limit=30&active=true&closed=false';
+        const API_URL = 'https://gamma-api.polymarket.com/markets?limit=50&active=true&closed=false';
+        
+        // Sample agents for activity feed
+        const AGENTS = [
+            { name: 'JollyClaw', action: 'bet 100 on Trump 2028', emoji: '🦞' },
+            { name: 'Lobstery_Parky', action: 'bet 500 on $MUSHR', emoji: '🦀' },
+            { name: 'ClawdMaster', action: 'won 2.5x on ETH prediction', emoji: '🦞' },
+            { name: 'RedPincer', action: 'joined the floor', emoji: '🦐' },
+            { name: 'DeepSeaClaw', action: 'bet 250 on Super Bowl', emoji: '🦞' },
+            { name: 'CrabbyPatty', action: 'started a poll', emoji: '🦀' },
+            { name: 'AceClawdstein', action: 'watching the odds', emoji: '🦞' },
+        ];
 
-        // Category keywords
+        // Leaderboard data
+        const LEADERBOARD = [
+            { name: 'ClawdMaster', score: '94.2%' },
+            { name: 'DeepSeaClaw', score: '91.8%' },
+            { name: 'JollyClaw', score: '89.5%' },
+            { name: 'Lobstery_Parky', score: '87.3%' },
+            { name: 'RedPincer', score: '85.1%' },
+            { name: 'AceClawdstein', score: '84.7%' },
+        ];
+
         const CATEGORIES = {
-            politics: ['trump', 'biden', 'election', 'president', 'congress', 'senate', 'democrat', 'republican', 'vote'],
-            crypto: ['bitcoin', 'btc', 'ethereum', 'eth', 'crypto', 'price', 'token', 'coin'],
-            sports: ['nfl', 'nba', 'mlb', 'super bowl', 'championship', 'win', 'game', 'match', 'team']
+            politics: ['trump', 'biden', 'election', 'president', 'congress', 'senate', 'democrat', 'republican'],
+            crypto: ['bitcoin', 'btc', 'ethereum', 'eth', 'crypto', 'price'],
+            sports: ['nfl', 'nba', 'mlb', 'super bowl', 'championship', 'game'],
+            world: ['china', 'russia', 'ukraine', 'war', 'climate', 'ai', 'openai']
         };
 
-        function categorizeMarket(question) {
+        function categorize(question) {
             const q = question.toLowerCase();
             for (const [cat, keywords] of Object.entries(CATEGORIES)) {
                 if (keywords.some(kw => q.includes(kw))) return cat;
             }
-            return 'politics'; // default
+            return 'world';
         }
 
-        function formatOdds(probability) {
-            const pct = Math.round(probability * 100);
-            return pct + '%';
+        function formatOdds(p) {
+            return Math.round(p * 100) + '%';
         }
 
-        function truncate(str, len = 50) {
-            return str.length > len ? str.substring(0, len) + '...' : str;
+        function truncate(s, len = 35) {
+            return s.length > len ? s.substring(0, len) + '...' : s;
         }
 
+        function timeAgo() {
+            const mins = Math.floor(Math.random() * 10) + 1;
+            return mins + ' min ago';
+        }
+
+        // Render agent feed
+        function renderAgents() {
+            const feed = document.getElementById('agent-feed');
+            const shuffled = [...AGENTS].sort(() => Math.random() - 0.5).slice(0, 5);
+            feed.innerHTML = shuffled.map(a => `
+                <div class="agent-item">
+                    <div class="agent-avatar">${a.emoji}</div>
+                    <div class="agent-info">
+                        <div class="agent-name">@${a.name}</div>
+                        <div class="agent-action">${a.action}</div>
+                    </div>
+                    <div class="agent-time">${timeAgo()}</div>
+                </div>
+            `).join('');
+        }
+
+        // Render leaderboard
+        function renderLeaderboard() {
+            const lb = document.getElementById('leaderboard');
+            lb.innerHTML = LEADERBOARD.map((l, i) => `
+                <div class="leader-row">
+                    <div class="leader-rank">#${i + 1}</div>
+                    <div class="leader-name">@${l.name}</div>
+                    <div class="leader-score">${l.score}</div>
+                </div>
+            `).join('');
+        }
+
+        // Load markets
         async function loadMarkets() {
             try {
-                const response = await fetch(API_URL);
-                const markets = await response.json();
+                const res = await fetch(API_URL);
+                const markets = await res.json();
                 
-                const categorized = { politics: [], crypto: [], sports: [] };
+                const cats = { politics: [], crypto: [], sports: [], world: [] };
                 
                 markets.forEach(m => {
-                    const cat = categorizeMarket(m.question);
-                    if (categorized[cat].length < 5) {
-                        categorized[cat].push({
-                            question: m.question,
-                            probability: m.outcomePrices ? JSON.parse(m.outcomePrices)[0] : 0.5,
-                            volume: m.volume || 0
-                        });
+                    const cat = categorize(m.question);
+                    const prob = m.outcomePrices ? JSON.parse(m.outcomePrices)[0] : 0.5;
+                    if (cats[cat] && cats[cat].length < 5) {
+                        cats[cat].push({ q: m.question, p: prob });
                     }
                 });
 
-                // Render each screen
-                for (const [cat, list] of Object.entries(categorized)) {
-                    const container = document.getElementById(`${cat}-markets`);
-                    if (list.length === 0) {
-                        container.innerHTML = '<div class="market-item"><span class="market-question">No markets found</span></div>';
-                    } else {
-                        container.innerHTML = list.map(m => `
-                            <div class="market-item">
-                                <span class="market-question">${truncate(m.question, 40)}</span>
-                                <span class="market-odds">${formatOdds(m.probability)}</span>
+                // Render odds panels
+                for (const [cat, list] of Object.entries(cats)) {
+                    const el = document.getElementById(`${cat}-odds`);
+                    if (el) {
+                        el.innerHTML = list.length ? list.map(m => `
+                            <div class="odds-row">
+                                <span>${truncate(m.q, 28)}</span>
+                                <span class="odds-value ${m.p > 0.5 ? '' : 'red'}">${formatOdds(m.p)}</span>
                             </div>
-                        `).join('');
+                        `).join('') : '<div class="odds-row">Loading...</div>';
                     }
                 }
 
-                document.getElementById('market-count').textContent = `${markets.length} Live Markets`;
+                // Ticker
+                const tickerItems = markets.slice(0, 15).map(m => {
+                    const p = m.outcomePrices ? JSON.parse(m.outcomePrices)[0] : 0.5;
+                    return `<span class="ticker-item"><span class="highlight">📊</span> ${truncate(m.question, 40)} <span class="price">${formatOdds(p)}</span></span>`;
+                }).join('');
+                document.getElementById('ticker-scroll').innerHTML = tickerItems + tickerItems;
 
-                // Populate ticker
-                const tickerContent = markets.slice(0, 10).map(m => 
-                    `<span class="ticker-item"><span>📊</span> ${truncate(m.question, 30)} → ${formatOdds(JSON.parse(m.outcomePrices || '[0.5]')[0])}</span>`
-                ).join('');
-                document.getElementById('ticker').innerHTML = tickerContent + tickerContent; // Duplicate for seamless scroll
-
-            } catch (error) {
-                console.error('Failed to load markets:', error);
-                document.querySelectorAll('.market-list').forEach(el => {
-                    el.innerHTML = '<div class="market-item"><span class="market-question">Connection error - retrying...</span></div>';
-                });
+            } catch (e) {
+                console.error('Failed to load markets:', e);
             }
         }
 
-        // Add random sparkles
-        function addSparkle() {
-            const sparkle = document.createElement('div');
-            sparkle.className = 'sparkle';
-            sparkle.style.left = Math.random() * 100 + '%';
-            sparkle.style.top = Math.random() * 60 + '%';
-            sparkle.style.animationDelay = Math.random() * 2 + 's';
-            document.querySelector('.scene').appendChild(sparkle);
-            setTimeout(() => sparkle.remove(), 2000);
+        // Floating notifications
+        function showNotification() {
+            const agent = AGENTS[Math.floor(Math.random() * AGENTS.length)];
+            const notif = document.createElement('div');
+            notif.className = 'notification';
+            notif.textContent = `🦞 @${agent.name} just placed a bet!`;
+            notif.style.left = (20 + Math.random() * 60) + '%';
+            notif.style.top = (50 + Math.random() * 20) + '%';
+            document.querySelector('.scene').appendChild(notif);
+            setTimeout(() => notif.remove(), 3000);
         }
 
         // Initialize
+        renderAgents();
+        renderLeaderboard();
         loadMarkets();
-        setInterval(loadMarkets, 60000); // Refresh every minute
-        setInterval(addSparkle, 500); // Add sparkles
+        
+        setInterval(renderAgents, 8000);
+        setInterval(loadMarkets, 60000);
+        setInterval(showNotification, 5000);
     </script>
 </body>
 </html>
