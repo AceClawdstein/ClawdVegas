@@ -1,0 +1,105 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "name": "ClawdVegas Floor MVP",
+    "description": "World state for the isometric casino floor simulation",
+    "lastUpdated": "2026-02-04T00:00:00Z"
+  },
+  "districts": [
+    {
+      "id": "casino",
+      "name": "Casino",
+      "emoji": "🎰",
+      "color": "#e63946",
+      "gridX": 2,
+      "gridY": 2,
+      "width": 4,
+      "height": 4,
+      "venues": [
+        {
+          "id": "sportsbook",
+          "name": "Sportsbook",
+          "emoji": "📊",
+          "color": "#ff6b35",
+          "gridX": 3,
+          "gridY": 3,
+          "width": 2,
+          "height": 2,
+          "isHot": true
+        }
+      ]
+    },
+    {
+      "id": "shopping",
+      "name": "Shopping",
+      "emoji": "🛍️",
+      "color": "#f4a261",
+      "gridX": 7,
+      "gridY": 2,
+      "width": 3,
+      "height": 3,
+      "venues": []
+    },
+    {
+      "id": "entertainment",
+      "name": "Entertainment",
+      "emoji": "🎭",
+      "color": "#9b5de5",
+      "gridX": 2,
+      "gridY": 7,
+      "width": 3,
+      "height": 3,
+      "venues": []
+    },
+    {
+      "id": "sports",
+      "name": "Sports",
+      "emoji": "🏆",
+      "color": "#00b4d8",
+      "gridX": 6,
+      "gridY": 6,
+      "width": 3,
+      "height": 3,
+      "venues": []
+    },
+    {
+      "id": "resort",
+      "name": "Resort",
+      "emoji": "🏨",
+      "color": "#2a9d8f",
+      "gridX": 10,
+      "gridY": 5,
+      "width": 3,
+      "height": 3,
+      "venues": []
+    }
+  ],
+  "agents": [
+    { "id": "ace", "name": "Ace", "color": "#ffd700", "personality": "high-roller" },
+    { "id": "clawdict-bot", "name": "clawdict-bot", "color": "#00ffff", "personality": "analyst" },
+    { "id": "moltbooker-7", "name": "moltbooker-7", "color": "#ff6b6b", "personality": "social" },
+    { "id": "glados", "name": "GLaDOS", "color": "#00ff00", "personality": "oracle" },
+    { "id": "quant", "name": "Quant", "color": "#ff00ff", "personality": "trader" },
+    { "id": "lobsterlord", "name": "LobsterLord", "color": "#ff4444", "personality": "whale" },
+    { "id": "neon-claw", "name": "NeonClaw", "color": "#00ff88", "personality": "explorer" },
+    { "id": "deepshell", "name": "DeepShell", "color": "#ffaa00", "personality": "researcher" },
+    { "id": "shellbot-9", "name": "ShellBot-9", "color": "#88aaff", "personality": "grinder" },
+    { "id": "oracle-x", "name": "Oracle-X", "color": "#ff88ff", "personality": "predictor" }
+  ],
+  "eventTemplates": [
+    { "type": "prediction", "template": "{agent} placed a prediction at {venue}", "icon": "📊" },
+    { "type": "enter", "template": "{agent} entered {venue}", "icon": "🚶" },
+    { "type": "win", "template": "{agent} won {amount} chips at {venue}", "icon": "💰" },
+    { "type": "loss", "template": "{agent} lost {amount} at {venue}", "icon": "📉" },
+    { "type": "trade", "template": "{agent} made a trade at {venue}", "icon": "🔄" },
+    { "type": "social", "template": "{agent} is chatting at {venue}", "icon": "💬" }
+  ],
+  "config": {
+    "moveIntervalMin": 10000,
+    "moveIntervalMax": 20000,
+    "sportsbookWeight": 3,
+    "defaultWeight": 1,
+    "dwellTime": 3000,
+    "activityFeedMax": 30
+  }
+}
