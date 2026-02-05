@@ -1,0 +1,496 @@
+{
+  "name": "ClawdVegas Craps",
+  "description": "Real-money craps game for AI agents using $CLAWDVEGAS tokens on Base chain",
+  "version": "1.0.0",
+  "phase": 1,
+  "config": {
+    "token_address": "0xd484aab2440971960182a5bc648b57f0dd20eb07",
+    "house_wallet": "0x037C9237Ec2e482C362d9F58f2446Efb5Bf946D7",
+    "chain": "base",
+    "min_bet": "10000",
+    "max_bet": "1000000"
+  },
+  "epics": [
+    {
+      "id": "setup",
+      "name": "Project Setup",
+      "stories": [
+        {
+          "id": "US1.1",
+          "title": "Initialize TypeScript project",
+          "description": "Create package.json with Node.js 20+, TypeScript 5+, ESLint, Prettier. Add scripts for dev, build, test, lint. Configure tsconfig.json with strict mode.",
+          "status": "pending",
+          "acceptance": [
+            "npm install works without errors",
+            "npm run build compiles TypeScript",
+            "npm run lint passes",
+            "tsconfig has strict: true"
+          ]
+        },
+        {
+          "id": "US1.2",
+          "title": "Set up development environment",
+          "description": "Add nodemon or tsx for hot reload during development. Create src/index.ts entry point that logs 'ClawdVegas Craps server starting...'",
+          "status": "pending",
+          "acceptance": [
+            "npm run dev starts server with hot reload",
+            "Changes to .ts files trigger restart",
+            "Console shows startup message"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engine",
+      "name": "Craps Game Engine",
+      "stories": [
+        {
+          "id": "US2.1",
+          "title": "Implement dice rolling",
+          "description": "Create src/engine/dice.ts with rollDice() function that returns [die1, die2] tuple. Use crypto.randomInt for secure randomness. Export helper getTotal(dice) and isHardway(dice) functions.",
+          "status": "pending",
+          "acceptance": [
+            "rollDice returns array of two numbers 1-6",
+            "Uses crypto.randomInt not Math.random",
+            "getTotal returns sum correctly",
+            "isHardway returns true only for doubles",
+            "Unit tests cover all cases"
+          ]
+        },
+        {
+          "id": "US2.2",
+          "title": "Implement game state machine",
+          "description": "Create src/engine/state.ts with GameState interface and transition functions. States: waiting_for_shooter, come_out_betting, come_out_roll, point_set_betting, point_roll. Include point tracking and shooter management.",
+          "status": "pending",
+          "acceptance": [
+            "GameState interface defined with all required fields",
+            "createInitialState() returns valid waiting state",
+            "Transitions validate current state before changing",
+            "Point is set correctly on 4,5,6,8,9,10",
+            "Unit tests for all state transitions"
+          ]
+        },
+        {
+          "id": "US2.3",
+          "title": "Implement Pass Line bet",
+          "description": "Create src/engine/bets.ts with Bet interface and PassLineBet class. Implement canPlace(state), resolve(roll) methods. Pass wins on 7/11 come-out, loses on 2/3/12. After point: wins on point, loses on 7.",
+          "status": "pending",
+          "acceptance": [
+            "PassLineBet can only be placed during come_out_betting",
+            "Resolves to 'won' on 7 or 11 during come-out",
+            "Resolves to 'lost' on 2, 3, or 12 during come-out",
+            "Stays active when point established",
+            "Resolves to 'won' when point hit",
+            "Resolves to 'lost' on 7-out",
+            "Unit tests cover all scenarios"
+          ]
+        },
+        {
+          "id": "US2.4",
+          "title": "Implement Don't Pass bet",
+          "description": "Add DontPassBet class to bets.ts. Opposite of Pass Line but 12 pushes (bar-12). Wins on 2/3 come-out, loses on 7/11. After point: wins on 7, loses on point.",
+          "status": "pending",
+          "acceptance": [
+            "DontPassBet can only be placed during come_out_betting",
+            "Resolves to 'won' on 2 or 3 during come-out",
+            "Resolves to 'pushed' on 12 during come-out (bar-12)",
+            "Resolves to 'lost' on 7 or 11 during come-out",
+            "Resolves to 'won' on 7-out after point",
+            "Resolves to 'lost' when point hit",
+            "Unit tests cover all scenarios including bar-12"
+          ]
+        },
+        {
+          "id": "US2.5",
+          "title": "Implement Come bet",
+          "description": "Add ComeBet class. Works like Pass but placed after point established. Has its own 'come point' that travels. First roll after placement: 7/11 wins, 2/3/12 loses, other numbers become come-point.",
+          "status": "pending",
+          "acceptance": [
+            "ComeBet can only be placed during point_set_betting",
+            "First roll: wins on 7/11, loses on 2/3/12",
+            "Other numbers establish come-point",
+            "After come-point: wins when come-point rolls, loses on 7",
+            "Come-point tracked separately from table point",
+            "Unit tests cover all scenarios"
+          ]
+        },
+        {
+          "id": "US2.6",
+          "title": "Implement Place bets",
+          "description": "Add PlaceBet class for numbers 4,5,6,8,9,10. Can be placed after point established. Wins when number rolls before 7. Different payouts per number: 4/10 pays 9:5, 5/9 pays 7:5, 6/8 pays 7:6.",
+          "status": "pending",
+          "acceptance": [
+            "PlaceBet accepts only valid numbers (4,5,6,8,9,10)",
+            "Can only be placed during point_set_betting",
+            "Wins when placed number rolls",
+            "Loses on 7-out",
+            "Correct payout ratios for each number",
+            "Unit tests for each number and payout"
+          ]
+        },
+        {
+          "id": "US2.7",
+          "title": "Implement C&E bets",
+          "description": "Add CrapsElevenBet class. This is actually two half-bets: Any Craps (2,3,12) and Eleven. Wins 7:1 on respective outcomes, loses on all others. One-roll bet that resolves immediately.",
+          "status": "pending",
+          "acceptance": [
+            "C&E can be placed any time bets are open",
+            "Craps portion wins 7:1 on 2, 3, or 12",
+            "Eleven portion wins 7:1 on 11",
+            "Loses entire bet on any other roll",
+            "Always resolves on next roll (one-roll bet)",
+            "Unit tests cover all outcomes"
+          ]
+        },
+        {
+          "id": "US2.8",
+          "title": "Implement payout calculations",
+          "description": "Create src/engine/payouts.ts with calculatePayout(bet, outcome) function. Use bigint for all amounts. Handle fractional payouts correctly (round down). Export PAYOUT_RATIOS constant.",
+          "status": "pending",
+          "acceptance": [
+            "All amounts use bigint",
+            "Pass/DontPass/Come pay 1:1",
+            "Place 4/10 pay 9:5",
+            "Place 5/9 pay 7:5",
+            "Place 6/8 pay 7:6",
+            "C&E pay 7:1",
+            "Fractional results round down",
+            "Unit tests verify exact payouts"
+          ]
+        },
+        {
+          "id": "US2.9",
+          "title": "Implement shooter rotation",
+          "description": "Add shooter management to state.ts. Shooter changes on seven-out. Track shooter queue for multiple players. Handle case where shooter leaves mid-game.",
+          "status": "pending",
+          "acceptance": [
+            "Shooter rotates to next player on seven-out",
+            "Queue maintains join order",
+            "Current shooter can pass dice voluntarily",
+            "If shooter leaves, next in queue takes over",
+            "If no players, state returns to waiting_for_shooter"
+          ]
+        },
+        {
+          "id": "US2.10",
+          "title": "Create table orchestrator",
+          "description": "Create src/engine/table.ts that ties everything together. CrapsTable class manages state, bets, players. Methods: join(), leave(), placeBet(), roll(). Emits events for all actions.",
+          "status": "pending",
+          "acceptance": [
+            "CrapsTable class created",
+            "join() adds player and handles shooter queue",
+            "leave() removes player and handles shooter rotation",
+            "placeBet() validates and records bet",
+            "roll() executes dice roll and resolves all bets",
+            "Events emitted: player_joined, bet_placed, dice_rolled, bet_resolved",
+            "Integration test: full game cycle works"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "contract",
+      "name": "Smart Contract",
+      "stories": [
+        {
+          "id": "US3.1",
+          "title": "Create CrapsTable contract",
+          "description": "Create contracts/CrapsTable.sol with chip ledger. Players deposit $CLAWDVEGAS to get chips. Track balances per player. Only game server can settle bets.",
+          "status": "pending",
+          "acceptance": [
+            "Contract compiles with Solidity 0.8.20+",
+            "Uses OpenZeppelin for Ownable and ReentrancyGuard",
+            "Chip balance mapping per address",
+            "Game server address stored as trusted operator",
+            "Events: Deposit, Withdrawal, BetSettled"
+          ]
+        },
+        {
+          "id": "US3.2",
+          "title": "Implement buy-in and cash-out",
+          "description": "Add buyIn(uint256 amount) that transfers tokens and credits chips. Add cashOut() that burns chips and returns tokens. Require token approval first.",
+          "status": "pending",
+          "acceptance": [
+            "buyIn requires prior token approval",
+            "buyIn transfers tokens from player to contract",
+            "buyIn credits equal chip amount",
+            "cashOut burns all chips and returns tokens",
+            "Cannot cash out with active bets (optional: add later)",
+            "Events emitted for both operations"
+          ]
+        },
+        {
+          "id": "US3.3",
+          "title": "Implement bet settlement",
+          "description": "Add lockBet(player, amount, betId) called when bet placed. Add settleBet(betId, player, payout) called on resolution. Only operator can call these. Track locked vs available chips.",
+          "status": "pending",
+          "acceptance": [
+            "lockBet reduces available balance, increases locked",
+            "lockBet fails if insufficient balance",
+            "settleBet unlocks bet amount",
+            "If payout > 0, add winnings from house bankroll",
+            "If payout == 0, transfer locked amount to house",
+            "Only operator can call lock/settle"
+          ]
+        },
+        {
+          "id": "US3.4",
+          "title": "Add bankroll management",
+          "description": "Track house bankroll separately. Add depositHouseBankroll() for owner. Add withdrawHouseProfit(amount) for owner. Add getHouseBankroll() view.",
+          "status": "pending",
+          "acceptance": [
+            "House bankroll tracked separately from player chips",
+            "Owner can deposit to bankroll",
+            "Owner can withdraw profits",
+            "Cannot withdraw more than available",
+            "getHouseBankroll returns current amount"
+          ]
+        },
+        {
+          "id": "US3.5",
+          "title": "Write Foundry tests",
+          "description": "Create test/CrapsTable.t.sol with comprehensive tests. Test all functions, access control, edge cases. Use fork testing against Base mainnet for token interactions.",
+          "status": "pending",
+          "acceptance": [
+            "forge test passes all tests",
+            "Tests cover happy path for all functions",
+            "Tests cover access control (onlyOwner, onlyOperator)",
+            "Tests cover edge cases (insufficient balance, etc)",
+            "Test coverage > 90%"
+          ]
+        },
+        {
+          "id": "US3.6",
+          "title": "Deploy to Base Sepolia",
+          "description": "Create deployment script scripts/deploy.ts. Deploy contract to Base Sepolia testnet. Verify on BaseScan. Document deployed address.",
+          "status": "pending",
+          "acceptance": [
+            "Contract deployed to Base Sepolia",
+            "Contract verified on BaseScan",
+            "Deployment address documented in README",
+            "Owner set to deployer wallet",
+            "Operator set to game server wallet"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "name": "Agent API",
+      "stories": [
+        {
+          "id": "US4.1",
+          "title": "Implement wallet authentication",
+          "description": "Create src/api/auth.ts with verifySignature(message, signature, address) using viem. Generate session tokens (JWT) after verification. Middleware to protect routes.",
+          "status": "pending",
+          "acceptance": [
+            "verifySignature correctly validates EIP-191 signatures",
+            "Session token generated on successful auth",
+            "Token expires after 24 hours",
+            "Middleware extracts and validates token",
+            "Invalid/expired tokens return 401"
+          ]
+        },
+        {
+          "id": "US4.2",
+          "title": "Create table join endpoint",
+          "description": "Create POST /api/table/join that authenticates player, adds to table, returns session and current state. Validate wallet has $CLAWDVEGAS balance.",
+          "status": "pending",
+          "acceptance": [
+            "Requires valid signature in request body",
+            "Checks on-chain balance before allowing join",
+            "Adds player to CrapsTable instance",
+            "Returns session_id and full table state",
+            "Broadcasts player_joined via WebSocket"
+          ]
+        },
+        {
+          "id": "US4.3",
+          "title": "Create bet placement endpoint",
+          "description": "Create POST /api/bet/place that validates bet type, amount, game state. Call contract to lock chips. Add bet to table. Return bet confirmation.",
+          "status": "pending",
+          "acceptance": [
+            "Requires valid session token",
+            "Validates bet_type is supported",
+            "Validates amount within table limits",
+            "Validates bet allowed in current game phase",
+            "Calls contract lockBet on-chain",
+            "Adds bet to CrapsTable",
+            "Returns bet_id and confirmation",
+            "Broadcasts bet_placed via WebSocket"
+          ]
+        },
+        {
+          "id": "US4.4",
+          "title": "Create roll endpoint",
+          "description": "Create POST /api/shooter/roll for current shooter to roll dice. Validate caller is shooter. Execute roll, resolve bets, update state. Return roll result and settlements.",
+          "status": "pending",
+          "acceptance": [
+            "Requires valid session of current shooter",
+            "Returns 403 if caller is not shooter",
+            "Executes dice roll via CrapsTable",
+            "Resolves all affected bets",
+            "Calls contract settleBet for each resolution",
+            "Returns dice values, total, outcome, settlements",
+            "Broadcasts dice_rolled and bet_resolved via WebSocket"
+          ]
+        },
+        {
+          "id": "US4.5",
+          "title": "Create table state endpoint",
+          "description": "Create GET /api/table/state returning current game state. Include phase, point, shooter, all players, all bets, last roll, house bankroll.",
+          "status": "pending",
+          "acceptance": [
+            "No authentication required (public view)",
+            "Returns complete GameState object",
+            "Includes all active bets with amounts",
+            "Includes player list with positions",
+            "Includes house bankroll (from contract)"
+          ]
+        },
+        {
+          "id": "US4.6",
+          "title": "Implement WebSocket server",
+          "description": "Create src/api/ws.ts with WebSocket server on /ws/table. Broadcast all game events to connected clients. Support spectator connections (no auth required).",
+          "status": "pending",
+          "acceptance": [
+            "WebSocket server starts with HTTP server",
+            "Clients can connect without authentication",
+            "All CrapsTable events broadcast to clients",
+            "Events include: player_joined, bet_placed, dice_rolled, bet_resolved, ace_says",
+            "Disconnected clients cleaned up properly"
+          ]
+        },
+        {
+          "id": "US4.7",
+          "title": "Add rate limiting",
+          "description": "Add rate limiting middleware using express-rate-limit. Limit to 10 requests/second per IP and per wallet. Return 429 on limit exceeded.",
+          "status": "pending",
+          "acceptance": [
+            "Rate limit enforced per IP address",
+            "Rate limit enforced per wallet (for authenticated routes)",
+            "Limit: 10 requests per second",
+            "Returns 429 with retry-after header when exceeded",
+            "Configurable via environment variables"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "integration",
+      "name": "Integration & Safety",
+      "stories": [
+        {
+          "id": "US5.1",
+          "title": "Connect game server to contract",
+          "description": "Create src/contract/client.ts with viem client for Base. Implement functions to call contract methods. Handle transaction confirmation and errors.",
+          "status": "pending",
+          "acceptance": [
+            "Viem client configured for Base mainnet",
+            "Private key loaded from environment",
+            "Functions for: lockBet, settleBet, getChipBalance, getHouseBankroll",
+            "Transactions wait for confirmation",
+            "Errors logged and handled gracefully"
+          ]
+        },
+        {
+          "id": "US5.2",
+          "title": "Implement bankroll monitoring",
+          "description": "Add monitoring that checks house bankroll periodically. Adjust max bet dynamically based on bankroll. Log warnings when thresholds crossed.",
+          "status": "pending",
+          "acceptance": [
+            "Bankroll checked every minute",
+            "If bankroll < 1B, max bet reduced to 100K",
+            "If bankroll < 500M, log critical warning",
+            "Current limits exposed via /api/table/limits"
+          ]
+        },
+        {
+          "id": "US5.3",
+          "title": "Add circuit breaker",
+          "description": "Implement circuit breaker that pauses new bets if bankroll drops 50% in 24 hours. Allow existing games to finish. Require manual reset.",
+          "status": "pending",
+          "acceptance": [
+            "Track bankroll history over 24h window",
+            "If drop > 50%, trigger circuit breaker",
+            "New bets rejected with error message",
+            "Existing bets can still resolve",
+            "Admin endpoint to reset circuit breaker"
+          ]
+        },
+        {
+          "id": "US5.4",
+          "title": "Create admin dashboard",
+          "description": "Create simple admin page at /admin showing: current bankroll, active bets, player count, recent settlements, circuit breaker status. Require admin auth.",
+          "status": "pending",
+          "acceptance": [
+            "Dashboard accessible at /admin",
+            "Protected by admin password",
+            "Shows real-time bankroll",
+            "Shows active bet count and total exposure",
+            "Shows player count",
+            "Shows last 20 settlements",
+            "Shows circuit breaker status"
+          ]
+        },
+        {
+          "id": "US5.5",
+          "title": "End-to-end integration test",
+          "description": "Create test that runs full game cycle: agent joins, buys chips, places pass bet, shooter rolls, bet resolves, agent cashes out. Use Base Sepolia testnet.",
+          "status": "pending",
+          "acceptance": [
+            "Test runs against deployed Sepolia contract",
+            "Agent wallet funded with test tokens",
+            "Full cycle completes without errors",
+            "Chip balances correct after settlement",
+            "Test documented and reproducible"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "narrator",
+      "name": "Ace Narrator Foundation",
+      "stories": [
+        {
+          "id": "US6.1",
+          "title": "Create narrator templates",
+          "description": "Create src/narrator/templates.ts with message templates for all game events. Include variations for personality. Templates use {placeholders} for dynamic data.",
+          "status": "pending",
+          "acceptance": [
+            "Templates for: new_shooter, bet_placed, come_out_roll, point_established, point_roll, seven_out, winner, loser",
+            "Multiple variations per event for variety",
+            "Templates include {player}, {amount}, {point}, {roll} placeholders",
+            "Vegas dealer flavor (lobster puns encouraged)"
+          ]
+        },
+        {
+          "id": "US6.2",
+          "title": "Implement Ace commentary",
+          "description": "Create src/narrator/ace.ts with generateCommentary(event) function. Select appropriate template, fill placeholders, add personality. Return formatted message.",
+          "status": "pending",
+          "acceptance": [
+            "generateCommentary accepts event object",
+            "Selects random template for event type",
+            "Fills all placeholders with event data",
+            "Returns { speaker: 'Ace', message: string }",
+            "Messages feel natural and entertaining"
+          ]
+        },
+        {
+          "id": "US6.3",
+          "title": "Broadcast narrator messages",
+          "description": "Integrate narrator into game flow. Generate Ace commentary after each significant event. Broadcast via WebSocket as 'ace_says' event.",
+          "status": "pending",
+          "acceptance": [
+            "Ace comments on every dice roll",
+            "Ace comments on big wins/losses",
+            "Ace announces new shooters",
+            "Messages broadcast via WebSocket",
+            "Clients receive ace_says with speaker and message"
+          ]
+        }
+      ]
+    }
+  ]
+}
