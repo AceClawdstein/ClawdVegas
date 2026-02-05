@@ -3,3 +3,6 @@ node_modules/
 *.log
 .DS_Store
 .env.local
+
+# Cloned tools (at root level only)
+/ralph/
