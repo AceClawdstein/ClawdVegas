@@ -215,28 +215,43 @@ let W, H, originX, originY;
 
 function resize() {
   const rect = canvas.getBoundingClientRect();
-  W = rect.width;
-  H = rect.height;
-  if (W < 1 || H < 1) { W = 800; H = 600; }
+  W = rect.width || window.innerWidth - 320;
+  H = rect.height || window.innerHeight - 42;
+  if (W < 100) W = 800;
+  if (H < 100) H = 600;
+
   const dpr = window.devicePixelRatio || 1;
   canvas.width  = W * dpr;
   canvas.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  // Scale tiles to fit the viewport
-  // The iso grid spans roughly GRID_W + GRID_H tiles wide, (GRID_W + GRID_H)/2 tiles tall
-  const isoSpanX = (GRID_W + GRID_H);   // in half-tiles
-  const isoSpanY = (GRID_W + GRID_H) / 2; // in quarter-tiles
-  const fitW = W * 0.85 / (isoSpanX * 0.5);   // each half-tile = TILE/2
-  const fitH = H * 0.80 / (isoSpanY * 0.5);
-  TILE = Math.min(fitW, fitH, 52);
-  TILE = Math.max(TILE, 20); // floor
+  // Iso grid diamond dimensions (in tile units):
+  // Width = (GRID_W + GRID_H) half-tiles = (GRID_W + GRID_H) * TILE/2
+  // Height = (GRID_W + GRID_H) quarter-tiles = (GRID_W + GRID_H) * TILE/4
+  const gridPixelWidth = (GRID_W + GRID_H) * 0.5;   // in TILE units
+  const gridPixelHeight = (GRID_W + GRID_H) * 0.25; // in TILE units
 
-  // Center: the grid top-left corner (0,0) maps to (0,0) in iso.
-  // The center of the grid is roughly at col=GRID_W/2, row=GRID_H/2
-  const center = isoToScreen(GRID_W / 2, GRID_H / 2);
-  originX = W / 2 - center.x;
-  originY = H / 2 - center.y;
+  // Calculate tile size to fit canvas with padding
+  const maxTileByWidth = (W * 0.88) / gridPixelWidth;
+  const maxTileByHeight = (H * 0.88) / gridPixelHeight;
+  TILE = Math.min(maxTileByWidth, maxTileByHeight);
+  TILE = Math.max(TILE, 28);
+  TILE = Math.min(TILE, 58);
+
+  // Center the isometric grid in the canvas
+  // Grid center is at tile (GRID_W/2, GRID_H/2)
+  const half = TILE / 2;
+  const quarter = TILE / 4;
+
+  // In iso coords, center tile maps to:
+  const centerCol = GRID_W / 2;
+  const centerRow = GRID_H / 2;
+  const centerX = (centerCol - centerRow) * half;
+  const centerY = (centerCol + centerRow) * quarter;
+
+  // We want this center point to appear at canvas center
+  originX = (W / 2) - centerX;
+  originY = (H / 2) - centerY;
 
   // Recompute agent screen positions
   agents.forEach(a => {
@@ -621,11 +636,11 @@ function render(now) {
     for (let c = 0; c < GRID_W; c++) {
       const tile = tileMap[r + ',' + c];
       if (tile) {
-        let alpha = 0.55;
-        if (tile.isHot) alpha = 0.45 + 0.25 * Math.sin(glowT * 2.5);
+        let alpha = 0.65;
+        if (tile.isHot) alpha = 0.55 + 0.25 * Math.sin(glowT * 2.5);
         drawTile(c, r, tile.color, alpha);
       } else {
-        drawTile(c, r, '#1a0d0d', 0.2);
+        drawTile(c, r, '#2a1515', 0.5);  // more visible empty tiles
       }
     }
   }
