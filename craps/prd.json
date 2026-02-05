@@ -34,8 +34,8 @@
         "Console shows startup message"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Already configured - tsx watch works, startup message displays"
     },
     {
       "id": "US2.1",
@@ -49,8 +49,8 @@
         "Unit tests cover all cases"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented with crypto.randomInt, includes helpers: isNatural, isCraps, isPoint, isPointNumber"
     },
     {
       "id": "US2.2",

@@ -40,3 +40,13 @@ This file tracks learnings discovered during development. Ralph appends here.
 
 ## Learnings (Ralph appends below)
 
+## 2026-02-05 - US1.1, US1.2, US2.1
+- Completed project setup stories
+- Implemented dice rolling module with crypto.randomInt
+- Files: src/engine/dice.ts, tests/engine/dice.test.ts
+- **Learnings:**
+  - crypto.randomInt(1, 7) is exclusive on upper bound, so returns 1-6
+  - DicePair type is readonly tuple for immutability
+  - Added helper functions beyond requirements: isNatural, isCraps, isPoint
+---
+
