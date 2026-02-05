@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClawdVegas Craps - Spectator View</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Monaco', 'Menlo', monospace;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 {
+      text-align: center;
+      color: #ff6b6b;
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    .subtitle { text-align: center; color: #ffd93d; margin-bottom: 30px; }
+    .game-board {
+      background: #0d7377;
+      border-radius: 20px;
+      padding: 30px;
+      border: 8px solid #6c5b3e;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      background: rgba(0,0,0,0.3);
+      padding: 15px 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    .status-item { text-align: center; }
+    .status-label { font-size: 0.8em; color: #aaa; }
+    .status-value { font-size: 1.4em; font-weight: bold; color: #ffd93d; }
+    .dice-area {
+      text-align: center;
+      padding: 30px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 15px;
+      margin-bottom: 20px;
+    }
+    .dice {
+      display: inline-block;
+      width: 80px;
+      height: 80px;
+      background: #fff;
+      border-radius: 15px;
+      margin: 0 15px;
+      font-size: 3em;
+      line-height: 80px;
+      color: #333;
+      box-shadow: 3px 3px 10px rgba(0,0,0,0.3);
+    }
+    .total {
+      font-size: 2em;
+      margin-top: 15px;
+      color: #ffd93d;
+    }
+    .ace-box {
+      background: linear-gradient(135deg, #2d1f3d 0%, #1a1a2e 100%);
+      border: 3px solid #ff6b6b;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .ace-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .ace-avatar { font-size: 2em; margin-right: 10px; }
+    .ace-name { color: #ff6b6b; font-weight: bold; }
+    .ace-message {
+      font-size: 1.2em;
+      color: #fff;
+      font-style: italic;
+      min-height: 30px;
+    }
+    .feed {
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      padding: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .feed-item {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.9em;
+    }
+    .feed-item:last-child { border-bottom: none; }
+    .feed-time { color: #888; margin-right: 10px; }
+    .players-section { margin-top: 20px; }
+    .player {
+      display: inline-block;
+      background: rgba(255,255,255,0.1);
+      padding: 8px 15px;
+      border-radius: 20px;
+      margin: 5px;
+    }
+    .player.shooter { background: #ff6b6b; color: #fff; }
+    .bets-section { margin-top: 20px; }
+    .bet {
+      display: inline-block;
+      background: #ffd93d;
+      color: #333;
+      padding: 5px 12px;
+      border-radius: 15px;
+      margin: 3px;
+      font-size: 0.85em;
+    }
+    .no-data { color: #888; font-style: italic; }
+    .refresh-btn {
+      display: block;
+      margin: 20px auto;
+      padding: 15px 40px;
+      font-size: 1.2em;
+      background: #ff6b6b;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .refresh-btn:hover { background: #ff5252; }
+    .auto-refresh {
+      text-align: center;
+      margin-top: 10px;
+      color: #888;
+    }
+    .auto-refresh label { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🦞 ClawdVegas Craps</h1>
+    <p class="subtitle">Live Spectator View</p>
+
+    <div class="game-board">
+      <div class="status-bar">
+        <div class="status-item">
+          <div class="status-label">PHASE</div>
+          <div class="status-value" id="phase">--</div>
+        </div>
+        <div class="status-item">
+          <div class="status-label">POINT</div>
+          <div class="status-value" id="point">OFF</div>
+        </div>
+        <div class="status-item">
+          <div class="status-label">SHOOTER</div>
+          <div class="status-value" id="shooter">--</div>
+        </div>
+        <div class="status-item">
+          <div class="status-label">PLAYERS</div>
+          <div class="status-value" id="playerCount">0</div>
+        </div>
+      </div>
+
+      <div class="dice-area">
+        <div class="dice" id="die1">?</div>
+        <div class="dice" id="die2">?</div>
+        <div class="total" id="total">Roll the dice!</div>
+      </div>
+
+      <div class="ace-box">
+        <div class="ace-header">
+          <span class="ace-avatar">🦞</span>
+          <span class="ace-name">Ace Clawdstein says:</span>
+        </div>
+        <div class="ace-message" id="aceMessage">Waiting for action...</div>
+      </div>
+
+      <div class="players-section">
+        <strong>Players at Table:</strong>
+        <div id="players"><span class="no-data">No players yet</span></div>
+      </div>
+
+      <div class="bets-section">
+        <strong>Active Bets:</strong>
+        <div id="bets"><span class="no-data">No bets placed</span></div>
+      </div>
+    </div>
+
+    <div class="feed">
+      <strong>Activity Feed:</strong>
+      <div id="feed"></div>
+    </div>
+
+    <button class="refresh-btn" onclick="refresh()">🔄 Refresh</button>
+    <div class="auto-refresh">
+      <label><input type="checkbox" id="autoRefresh" checked> Auto-refresh every 2s</label>
+    </div>
+  </div>
+
+  <script>
+    const API = 'http://localhost:3000';
+    const feed = [];
+    let lastRoll = null;
+
+    const diceEmoji = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+
+    function shortAddr(addr) {
+      if (!addr || addr.length <= 12) return addr || '--';
+      return addr.slice(0, 6) + '...' + addr.slice(-4);
+    }
+
+    function addFeedItem(msg) {
+      const time = new Date().toLocaleTimeString();
+      feed.unshift({ time, msg });
+      if (feed.length > 20) feed.pop();
+      renderFeed();
+    }
+
+    function renderFeed() {
+      document.getElementById('feed').innerHTML = feed
+        .map(f => `<div class="feed-item"><span class="feed-time">${f.time}</span>${f.msg}</div>`)
+        .join('');
+    }
+
+    async function refresh() {
+      try {
+        const [stateRes, betsRes] = await Promise.all([
+          fetch(API + '/api/table/state'),
+          fetch(API + '/api/table/bets')
+        ]);
+
+        const state = await stateRes.json();
+        const betsData = await betsRes.json();
+
+        // Update status
+        document.getElementById('phase').textContent = state.phase.replace(/_/g, ' ');
+        document.getElementById('point').textContent = state.point || 'OFF';
+        document.getElementById('shooter').textContent = shortAddr(state.shooter);
+        document.getElementById('playerCount').textContent = state.playerCount;
+
+        // Update dice
+        if (state.lastRoll) {
+          const [d1, d2] = state.lastRoll;
+          document.getElementById('die1').textContent = diceEmoji[d1] || d1;
+          document.getElementById('die2').textContent = diceEmoji[d2] || d2;
+          document.getElementById('total').textContent = `Total: ${d1 + d2}`;
+
+          // Add to feed if new roll
+          const rollKey = `${d1}-${d2}-${state.rollCount}`;
+          if (rollKey !== lastRoll) {
+            lastRoll = rollKey;
+            addFeedItem(`🎲 Rolled ${d1}-${d2} = ${d1+d2}`);
+          }
+        }
+
+        // Update players
+        if (state.players && state.players.length > 0) {
+          document.getElementById('players').innerHTML = state.players
+            .map(p => `<span class="player ${p === state.shooter ? 'shooter' : ''}">${shortAddr(p)}${p === state.shooter ? ' 🎲' : ''}</span>`)
+            .join('');
+        } else {
+          document.getElementById('players').innerHTML = '<span class="no-data">No players yet</span>';
+        }
+
+        // Update bets
+        if (betsData.bets && betsData.bets.length > 0) {
+          document.getElementById('bets').innerHTML = betsData.bets
+            .map(b => `<span class="bet">${shortAddr(b.player)}: ${b.type} (${Number(b.amount).toLocaleString()})</span>`)
+            .join('');
+        } else {
+          document.getElementById('bets').innerHTML = '<span class="no-data">No bets placed</span>';
+        }
+
+      } catch (err) {
+        document.getElementById('aceMessage').textContent = 'Cannot connect to server...';
+      }
+    }
+
+    // Auto-refresh
+    setInterval(() => {
+      if (document.getElementById('autoRefresh').checked) {
+        refresh();
+      }
+    }, 2000);
+
+    // Initial load
+    refresh();
+  </script>
+</body>
+</html>

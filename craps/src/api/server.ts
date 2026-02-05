@@ -4,11 +4,26 @@
  */
 
 import express, { type Request, type Response, type NextFunction } from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { createTable } from '../engine/table.js';
 import { type BetType } from '../engine/bets.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 app.use(express.json());
+
+// CORS for spectator page
+app.use((_req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
+// Serve static files (spectator page)
+app.use(express.static(path.join(__dirname, '../../public')));
 
 // Create the game table
 const table = createTable();
