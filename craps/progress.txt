@@ -4,6 +4,17 @@ This file tracks learnings discovered during development. Ralph appends here.
 
 ---
 
+## Codebase Patterns
+
+- Use `bigint` for all monetary calculations, never `number`
+- All exports should be explicit, avoid default exports
+- Unit tests go in `tests/` directory with `.test.ts` extension
+- Use vitest for testing
+- State machine transitions should be validated before execution
+- All bet resolution logic returns: 'won' | 'lost' | 'pushed' | 'active'
+
+---
+
 ## Project Setup Notes
 
 - Token: $CLAWDVEGAS at 0xd484aab2440971960182a5bc648b57f0dd20eb07 (Base)
