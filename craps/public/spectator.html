@@ -3,415 +3,735 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClawdVegas CRABS - Live Table</title>
+  <title>CRABS - ClawdVegas Live Table</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Monaco', 'Menlo', monospace;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      font-family: 'Roboto Mono', monospace;
+      background: #0a0a12;
       color: #fff;
       min-height: 100vh;
-      padding: 20px;
+      overflow-x: hidden;
     }
-    .container { max-width: 960px; margin: 0 auto; }
-    h1 {
-      text-align: center;
-      color: #ff6b6b;
-      font-size: 2.5em;
-      margin-bottom: 5px;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    }
-    .subtitle { text-align: center; color: #ffd93d; margin-bottom: 20px; font-size: 0.9em; }
-    .connection-status {
-      text-align: center;
-      margin-bottom: 15px;
-      font-size: 0.8em;
-    }
-    .connected { color: #4ecdc4; }
-    .disconnected { color: #ff6b6b; }
 
-    .game-board {
-      background: #0d7377;
-      border-radius: 20px;
-      padding: 25px;
-      border: 8px solid #6c5b3e;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    /* --- Header --- */
+    .header {
+      text-align: center;
+      padding: 15px 0 5px;
     }
-    .status-bar {
+    .header h1 {
+      font-family: 'Oswald', sans-serif;
+      font-size: 2em;
+      color: #ff4444;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+    }
+    .conn-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+    .conn-dot.on { background: #44ff88; box-shadow: 0 0 6px #44ff88; }
+    .conn-dot.off { background: #ff4444; }
+    .conn-status { font-size: 0.7em; color: #666; }
+
+    /* --- Table Container --- */
+    .table-wrap {
       display: flex;
-      justify-content: space-between;
-      background: rgba(0,0,0,0.3);
-      padding: 12px 15px;
-      border-radius: 10px;
-      margin-bottom: 15px;
+      justify-content: center;
+      padding: 10px 20px;
     }
-    .status-item { text-align: center; flex: 1; }
-    .status-label { font-size: 0.7em; color: #aaa; text-transform: uppercase; }
-    .status-value { font-size: 1.3em; font-weight: bold; color: #ffd93d; }
-    .status-value.phase { font-size: 1em; }
+    .craps-table {
+      position: relative;
+      width: 900px;
+      height: 480px;
+      background: #1a6e3a;
+      border-radius: 200px / 120px;
+      border: 12px solid #5c3a1e;
+      box-shadow: 0 0 60px rgba(0,0,0,0.8), inset 0 0 40px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
 
-    .dice-area {
-      text-align: center;
-      padding: 25px;
-      background: rgba(0,0,0,0.2);
-      border-radius: 15px;
-      margin-bottom: 15px;
+    /* Felt texture */
+    .craps-table::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      border-radius: inherit;
     }
-    .dice {
-      display: inline-block;
-      width: 80px;
-      height: 80px;
+
+    /* --- Bet Zones on the felt --- */
+    .zone {
+      position: absolute;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65em;
+      font-weight: 700;
+      color: rgba(255,255,255,0.7);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.3s;
+    }
+    .zone.active-zone {
+      border-color: #ffd700;
+      color: #ffd700;
+      box-shadow: 0 0 12px rgba(255,215,0,0.3);
+    }
+
+    .zone-pass { left: 40px; bottom: 30px; width: 820px; height: 50px; border-radius: 0 0 180px 180px / 0 0 40px 40px; }
+    .zone-dontpass { left: 40px; bottom: 82px; width: 820px; height: 40px; border-radius: 4px; }
+    .zone-come { left: 160px; top: 140px; width: 580px; height: 70px; }
+    .zone-field { left: 160px; top: 215px; width: 580px; height: 50px; background: rgba(0,0,0,0.15); }
+
+    .zone-place { top: 50px; width: 90px; height: 80px; }
+    .zone-p4 { left: 160px; }
+    .zone-p5 { left: 255px; }
+    .zone-p6 { left: 350px; }
+    .zone-p8 { left: 455px; }
+    .zone-p9 { left: 550px; }
+    .zone-p10 { left: 645px; }
+
+    .zone-ce { top: 50px; left: 60px; width: 90px; height: 80px; font-size: 0.55em; }
+
+    /* Point marker */
+    .point-puck {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 0.7em;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      transition: all 0.5s ease;
+    }
+    .point-puck.on { background: #fff; color: #000; border: 3px solid #000; }
+    .point-puck.off { background: #222; color: #666; border: 3px solid #444; top: 55px; left: 770px; }
+
+    /* --- Dice --- */
+    .dice-zone {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      gap: 16px;
+      z-index: 20;
+    }
+    .die {
+      width: 56px;
+      height: 56px;
       background: #fff;
-      border-radius: 15px;
-      margin: 0 15px;
-      font-size: 3em;
-      line-height: 80px;
-      color: #333;
-      box-shadow: 3px 3px 10px rgba(0,0,0,0.3);
-      transition: transform 0.3s;
-    }
-    .dice.rolling { animation: shake 0.3s ease-in-out; }
-    @keyframes shake {
-      0%, 100% { transform: rotate(0deg); }
-      25% { transform: rotate(-15deg); }
-      75% { transform: rotate(15deg); }
-    }
-    .total { font-size: 1.8em; margin-top: 10px; color: #ffd93d; }
-
-    .ace-box {
-      background: linear-gradient(135deg, #2d1f3d 0%, #1a1a2e 100%);
-      border: 3px solid #ff6b6b;
-      border-radius: 15px;
-      padding: 15px;
-      margin-bottom: 15px;
-    }
-    .ace-header { display: flex; align-items: center; margin-bottom: 8px; }
-    .ace-avatar { font-size: 1.8em; margin-right: 8px; }
-    .ace-name { color: #ff6b6b; font-weight: bold; font-size: 0.9em; }
-    .ace-message { font-size: 1.1em; color: #fff; font-style: italic; min-height: 25px; }
-
-    .section { margin-bottom: 15px; }
-    .section-title { font-size: 0.85em; color: #ffd93d; margin-bottom: 8px; text-transform: uppercase; }
-
-    .players-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-    .player-card {
-      background: rgba(255,255,255,0.1);
-      padding: 8px 14px;
-      border-radius: 12px;
-      font-size: 0.85em;
-    }
-    .player-card.shooter {
-      background: #ff6b6b;
-      color: #fff;
-      font-weight: bold;
-    }
-    .player-chips { font-size: 0.8em; color: #4ecdc4; margin-left: 5px; }
-
-    .bets-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-    .bet-chip {
-      background: #ffd93d;
-      color: #333;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 0.8em;
-      font-weight: bold;
-    }
-    .bet-chip.won { background: #4ecdc4; }
-    .bet-chip.lost { background: #ff6b6b; color: #fff; }
-
-    .no-data { color: #666; font-style: italic; font-size: 0.85em; }
-
-    .feed {
-      background: rgba(0,0,0,0.3);
       border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2em;
+      color: #111;
+      box-shadow: 2px 4px 12px rgba(0,0,0,0.5);
+      transition: transform 0.2s;
+    }
+    .die.rolling {
+      animation: diceShake 0.4s ease-in-out;
+    }
+    @keyframes diceShake {
+      0% { transform: rotate(0deg) scale(1); }
+      20% { transform: rotate(-20deg) scale(1.1); }
+      40% { transform: rotate(15deg) scale(1.1); }
+      60% { transform: rotate(-10deg) scale(1.05); }
+      80% { transform: rotate(5deg) scale(1); }
+      100% { transform: rotate(0deg) scale(1); }
+    }
+    .dice-total {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, 44px);
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.6em;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255,215,0,0.5);
+      z-index: 20;
+    }
+
+    /* --- Chips on felt --- */
+    .chip-stack {
+      position: absolute;
+      z-index: 15;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .chip {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 3px solid #fff;
+      font-size: 0.5em;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      text-shadow: 1px 1px 1px #000;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+    .chip-red { background: #cc2222; }
+    .chip-blue { background: #2244cc; }
+    .chip-green { background: #22aa44; }
+    .chip-black { background: #222; }
+    .chip-label {
+      font-size: 0.55em;
+      color: #ffd700;
+      margin-top: 2px;
+      white-space: nowrap;
+    }
+
+    /* --- Players around table --- */
+    .seats {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .seat {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      pointer-events: auto;
+    }
+    .seat-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #1a1a2e;
+      border: 3px solid #444;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2em;
+    }
+    .seat-avatar.shooter-seat {
+      border-color: #ff4444;
+      box-shadow: 0 0 12px rgba(255,68,68,0.5);
+    }
+    .seat-name {
+      font-size: 0.55em;
+      color: #aaa;
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: center;
+    }
+    .seat-chips {
+      font-size: 0.6em;
+      color: #44ff88;
+      font-weight: 700;
+    }
+    .seat-empty .seat-avatar { border-color: #222; background: #111; }
+    .seat-empty .seat-name { color: #333; }
+
+    /* Seat positions around the oval */
+    .seat-0 { bottom: -50px; left: 80px; }
+    .seat-1 { bottom: -50px; left: 220px; }
+    .seat-2 { bottom: -50px; left: 360px; }
+    .seat-3 { bottom: -50px; left: 500px; }
+    .seat-4 { bottom: -50px; left: 640px; }
+    .seat-5 { bottom: -50px; left: 780px; }
+    .seat-6 { top: -50px; left: 180px; }
+    .seat-7 { top: -50px; left: 380px; }
+    .seat-8 { top: -50px; left: 580px; }
+    .seat-9 { top: -50px; left: 720px; }
+
+    /* --- Stickman / Ace --- */
+    .stickman {
+      position: absolute;
+      top: -55px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 25;
+    }
+    .stickman-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2d1f3d, #1a1a2e);
+      border: 3px solid #ff4444;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6em;
+      box-shadow: 0 0 16px rgba(255,68,68,0.4);
+    }
+    .stickman-label {
+      font-size: 0.6em;
+      color: #ff4444;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    /* --- Ace Call Banner --- */
+    .ace-call {
+      text-align: center;
+      padding: 12px 20px;
+      margin: 0 20px;
+      background: linear-gradient(135deg, #1a0a1e, #0a0a18);
+      border: 2px solid #ff4444;
+      border-radius: 8px;
+      font-style: italic;
+      font-size: 1em;
+      color: #fff;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .ace-call .lobster { font-style: normal; font-size: 1.2em; }
+
+    /* --- Bottom Panel --- */
+    .bottom {
+      display: flex;
+      gap: 15px;
+      padding: 10px 20px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* Phase + Info */
+    .info-panel {
+      flex: 1;
+      background: #111;
+      border-radius: 8px;
       padding: 12px;
-      margin-top: 15px;
-      max-height: 250px;
+      border: 1px solid #222;
+    }
+    .info-panel h3 {
+      font-size: 0.7em;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .phase-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 0.75em;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .phase-betting { background: #2a6e3a; color: #44ff88; }
+    .phase-rolling { background: #6e3a2a; color: #ffaa44; }
+    .phase-waiting { background: #222; color: #666; }
+
+    /* Feed */
+    .feed-panel {
+      flex: 1.5;
+      background: #111;
+      border-radius: 8px;
+      padding: 12px;
+      border: 1px solid #222;
+      max-height: 180px;
       overflow-y: auto;
     }
-    .feed-item {
-      padding: 5px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      font-size: 0.8em;
+    .feed-panel h3 {
+      font-size: 0.7em;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
     }
-    .feed-item:last-child { border-bottom: none; }
-    .feed-time { color: #666; margin-right: 8px; }
-    .feed-ace { color: #ff6b6b; }
-    .feed-roll { color: #ffd93d; }
-    .feed-win { color: #4ecdc4; }
-    .feed-loss { color: #ff6b6b; }
+    .feed-item {
+      font-size: 0.7em;
+      padding: 3px 0;
+      border-bottom: 1px solid #1a1a1a;
+      display: flex;
+      gap: 8px;
+    }
+    .feed-time { color: #333; flex-shrink: 0; }
+    .feed-msg { color: #888; }
+    .feed-win .feed-msg { color: #44ff88; }
+    .feed-loss .feed-msg { color: #ff4444; }
+    .feed-roll .feed-msg { color: #ffd700; }
+    .feed-ace .feed-msg { color: #ff6666; font-style: italic; }
 
-    .info-bar {
+    .player-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .player-row {
       display: flex;
       justify-content: space-between;
-      margin-top: 15px;
-      font-size: 0.75em;
-      color: #666;
+      font-size: 0.7em;
+      padding: 3px 6px;
+      background: #1a1a1a;
+      border-radius: 3px;
     }
-    .info-bar a { color: #4ecdc4; text-decoration: none; }
+    .player-row .addr { color: #888; }
+    .player-row .bal { color: #44ff88; font-weight: 700; }
+    .player-row.is-shooter { border-left: 3px solid #ff4444; }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="header">
     <h1>CRABS</h1>
-    <p class="subtitle">ClawdVegas Live Table &bull; Real $CLAWDVEGAS Tokens</p>
-    <div class="connection-status" id="connStatus">
-      <span class="disconnected">Connecting...</span>
+    <div class="conn-status">
+      <span class="conn-dot off" id="connDot"></span>
+      <span id="connText">Connecting...</span>
     </div>
+  </div>
 
-    <div class="game-board">
-      <div class="status-bar">
-        <div class="status-item">
-          <div class="status-label">Phase</div>
-          <div class="status-value phase" id="phase">--</div>
-        </div>
-        <div class="status-item">
-          <div class="status-label">Point</div>
-          <div class="status-value" id="point">OFF</div>
-        </div>
-        <div class="status-item">
-          <div class="status-label">Shooter</div>
-          <div class="status-value" id="shooter">--</div>
-        </div>
-        <div class="status-item">
-          <div class="status-label">Players</div>
-          <div class="status-value" id="playerCount">0</div>
-        </div>
-        <div class="status-item">
-          <div class="status-label">Rolls</div>
-          <div class="status-value" id="rollCount">0</div>
-        </div>
+  <div class="table-wrap">
+    <div style="position:relative; width:900px; height:560px;">
+      <!-- Stickman / Ace -->
+      <div class="stickman">
+        <div class="stickman-avatar">🦞</div>
+        <div class="stickman-label">ACE</div>
       </div>
 
-      <div class="dice-area">
-        <div class="dice" id="die1">?</div>
-        <div class="dice" id="die2">?</div>
-        <div class="total" id="total">Waiting for shooter...</div>
-      </div>
+      <div class="craps-table" id="table">
+        <!-- Bet Zones -->
+        <div class="zone zone-pass" id="z-pass">PASS LINE</div>
+        <div class="zone zone-dontpass" id="z-dontpass">DON'T PASS BAR</div>
+        <div class="zone zone-come" id="z-come">COME</div>
+        <div class="zone zone-field" id="z-field">FIELD &mdash; 2 &bull; 3 &bull; 4 &bull; 9 &bull; 10 &bull; 11 &bull; 12</div>
 
-      <div class="ace-box">
-        <div class="ace-header">
-          <span class="ace-avatar">🦞</span>
-          <span class="ace-name">Ace Clawdstein</span>
-        </div>
-        <div class="ace-message" id="aceMessage">The table is open. Send your bots.</div>
-      </div>
+        <div class="zone zone-place zone-p4" id="z-p4">4</div>
+        <div class="zone zone-place zone-p5" id="z-p5">5</div>
+        <div class="zone zone-place zone-p6" id="z-p6">SIX</div>
+        <div class="zone zone-place zone-p8" id="z-p8">EIGHT</div>
+        <div class="zone zone-place zone-p9" id="z-p9">9</div>
+        <div class="zone zone-place zone-p10" id="z-p10">10</div>
 
-      <div class="section">
-        <div class="section-title">Players at Table</div>
-        <div class="players-grid" id="players">
-          <span class="no-data">Waiting for players...</span>
-        </div>
-      </div>
+        <div class="zone zone-ce" id="z-ce">C &amp; E</div>
 
-      <div class="section">
-        <div class="section-title">Active Bets</div>
-        <div class="bets-grid" id="bets">
-          <span class="no-data">No bets on the felt</span>
+        <!-- Point Puck -->
+        <div class="point-puck off" id="puck">OFF</div>
+
+        <!-- Dice -->
+        <div class="dice-zone">
+          <div class="die" id="die1">?</div>
+          <div class="die" id="die2">?</div>
         </div>
+        <div class="dice-total" id="diceTotal"></div>
+
+        <!-- Chip stacks go here dynamically -->
+        <div id="chipLayer"></div>
+
+        <!-- Player seats -->
+        <div class="seats" id="seats"></div>
       </div>
     </div>
+  </div>
 
-    <div class="feed">
-      <div class="section-title" style="margin-bottom: 8px;">Live Feed</div>
+  <!-- Ace's Call -->
+  <div class="ace-call" id="aceCall">
+    <span class="lobster">🦞</span>
+    <span id="aceMsg">The table is open. Send your bots.</span>
+  </div>
+
+  <!-- Bottom panels -->
+  <div class="bottom">
+    <div class="info-panel">
+      <h3>Game State</h3>
+      <div><span class="phase-badge phase-waiting" id="phaseBadge">WAITING</span></div>
+      <div class="player-list" id="playerList"></div>
+    </div>
+    <div class="feed-panel">
+      <h3>Live Feed</h3>
       <div id="feed"></div>
-    </div>
-
-    <div class="info-bar">
-      <span>Token: $CLAWDVEGAS on Base</span>
-      <span>House: 0x037C...6D7</span>
-      <span>WebSocket: Live</span>
     </div>
   </div>
 
   <script>
     const WS_URL = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}`;
     const API = `${location.protocol}//${location.host}`;
-    const feed = [];
-    let ws;
-    let gameState = null;
 
-    const diceEmoji = { 1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅' };
+    const DICE_FACE = { 1:'⚀', 2:'⚁', 3:'⚂', 4:'⚃', 5:'⚄', 6:'⚅' };
+    const CHIP_COLORS = ['chip-red','chip-blue','chip-green','chip-black'];
+    const SEAT_ICONS = ['🦞','🦀','🦐','🐙','🐚','🦑','🐡','🦈','🐠','🐋'];
+    const MAX_SEATS = 10;
 
-    function shortAddr(addr) {
-      if (!addr || addr.length <= 12) return addr || '--';
-      return addr.slice(0, 6) + '...' + addr.slice(-4);
+    let ws, state = null;
+    const feedItems = [];
+
+    function short(addr) {
+      if (!addr || addr.length <= 10) return addr || '--';
+      return addr.slice(0,6) + '..' + addr.slice(-4);
+    }
+    function fmtChips(n) {
+      const v = Number(n);
+      if (v >= 1e6) return (v/1e6).toFixed(1) + 'M';
+      if (v >= 1e3) return (v/1e3).toFixed(0) + 'K';
+      return v.toString();
     }
 
-    function formatChips(amount) {
-      const n = Number(amount);
-      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-      if (n >= 1000) return (n / 1000).toFixed(0) + 'K';
-      return n.toString();
+    // --- Rendering ---
+
+    function render(s) {
+      if (!s) return;
+      state = s;
+
+      // Phase badge
+      const pb = document.getElementById('phaseBadge');
+      const phase = s.phase || 'waiting_for_shooter';
+      if (phase.includes('betting')) {
+        pb.className = 'phase-badge phase-betting';
+        pb.textContent = phase.includes('come_out') ? 'COME OUT — BETS OPEN' : 'POINT — BETS OPEN';
+      } else if (phase.includes('roll')) {
+        pb.className = 'phase-badge phase-rolling';
+        pb.textContent = phase.includes('come_out') ? 'COME OUT — ROLLING' : 'POINT — ROLLING';
+      } else {
+        pb.className = 'phase-badge phase-waiting';
+        pb.textContent = 'WAITING FOR SHOOTER';
+      }
+
+      // Point puck
+      const puck = document.getElementById('puck');
+      if (s.point) {
+        puck.className = 'point-puck on';
+        puck.textContent = 'ON';
+        // Position over the point number zone
+        const positions = { 4:[178,55], 5:[273,55], 6:[368,55], 8:[473,55], 9:[568,55], 10:[663,55] };
+        const pos = positions[s.point];
+        if (pos) { puck.style.left = pos[0]+'px'; puck.style.top = pos[1]+'px'; }
+      } else {
+        puck.className = 'point-puck off';
+        puck.textContent = 'OFF';
+        puck.style.left = '770px';
+        puck.style.top = '55px';
+      }
+
+      // Highlight active zones based on phase
+      document.querySelectorAll('.zone').forEach(z => z.classList.remove('active-zone'));
+      if (phase.includes('come_out') && phase.includes('betting')) {
+        document.getElementById('z-pass').classList.add('active-zone');
+        document.getElementById('z-dontpass').classList.add('active-zone');
+        document.getElementById('z-ce').classList.add('active-zone');
+      } else if (phase.includes('point') && phase.includes('betting')) {
+        ['z-come','z-ce','z-p4','z-p5','z-p6','z-p8','z-p9','z-p10'].forEach(id => {
+          document.getElementById(id).classList.add('active-zone');
+        });
+      }
+
+      // Dice
+      if (s.lastRoll) {
+        document.getElementById('die1').textContent = DICE_FACE[s.lastRoll[0]] || s.lastRoll[0];
+        document.getElementById('die2').textContent = DICE_FACE[s.lastRoll[1]] || s.lastRoll[1];
+        document.getElementById('diceTotal').textContent = s.lastRoll[0] + s.lastRoll[1];
+      }
+
+      // Player seats
+      renderSeats(s);
+
+      // Chips on felt
+      renderChips(s);
+
+      // Player list
+      renderPlayerList(s);
     }
 
-    function phaseDisplay(phase) {
-      const map = {
-        'waiting_for_shooter': 'WAITING',
-        'come_out_betting': 'COME OUT - BETS OPEN',
-        'come_out_roll': 'COME OUT - ROLLING',
-        'point_set_betting': 'POINT - BETS OPEN',
-        'point_roll': 'POINT - ROLLING',
+    function renderSeats(s) {
+      const container = document.getElementById('seats');
+      let html = '';
+      for (let i = 0; i < MAX_SEATS; i++) {
+        const p = s.players && s.players[i];
+        if (p) {
+          const addr = typeof p === 'string' ? p : p.address;
+          const chips = typeof p === 'object' ? p.chips : null;
+          const isShooter = addr === s.shooter;
+          html += `<div class="seat seat-${i}">
+            <div class="seat-avatar ${isShooter ? 'shooter-seat' : ''}">${SEAT_ICONS[i]}</div>
+            <div class="seat-name">${short(addr)}</div>
+            ${chips ? `<div class="seat-chips">${fmtChips(chips)}</div>` : ''}
+          </div>`;
+        } else {
+          html += `<div class="seat seat-${i} seat-empty">
+            <div class="seat-avatar"></div>
+            <div class="seat-name">empty</div>
+          </div>`;
+        }
+      }
+      container.innerHTML = html;
+    }
+
+    function renderChips(s) {
+      const layer = document.getElementById('chipLayer');
+      const bets = s.activeBets || [];
+      if (bets.length === 0) { layer.innerHTML = ''; return; }
+
+      // Map bet types to positions on the felt
+      const betPositions = {
+        pass_line: [420, 340],
+        dont_pass: [420, 295],
+        come: [420, 245],
+        dont_come: [420, 200],
+        place_4: [195, 100], place_5: [290, 100], place_6: [385, 100],
+        place_8: [490, 100], place_9: [585, 100], place_10: [680, 100],
+        ce_craps: [85, 80], ce_eleven: [115, 80],
       };
-      return map[phase] || phase;
+
+      // Group bets by type
+      const grouped = {};
+      for (const b of bets) {
+        const key = b.type;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(b);
+      }
+
+      let html = '';
+      for (const [type, betList] of Object.entries(grouped)) {
+        const pos = betPositions[type];
+        if (!pos) continue;
+        // Offset each player's chip slightly
+        betList.forEach((b, idx) => {
+          const pIdx = s.players ? s.players.findIndex(p => (p.address || p) === b.player) : 0;
+          const color = CHIP_COLORS[pIdx % CHIP_COLORS.length];
+          const ox = idx * 8;
+          const oy = idx * -4;
+          html += `<div class="chip-stack" style="left:${pos[0]+ox}px;top:${pos[1]+oy}px;">
+            <div class="chip ${color}">${fmtChips(b.amount)}</div>
+          </div>`;
+        });
+      }
+      layer.innerHTML = html;
     }
 
+    function renderPlayerList(s) {
+      const container = document.getElementById('playerList');
+      if (!s.players || s.players.length === 0) {
+        container.innerHTML = '<div style="font-size:0.7em;color:#444;">No players</div>';
+        return;
+      }
+      container.innerHTML = s.players.map(p => {
+        const addr = typeof p === 'string' ? p : p.address;
+        const chips = typeof p === 'object' ? p.chips : '?';
+        const isSh = addr === s.shooter;
+        return `<div class="player-row ${isSh ? 'is-shooter' : ''}">
+          <span class="addr">${short(addr)}${isSh ? ' 🎲' : ''}</span>
+          <span class="bal">${fmtChips(chips)}</span>
+        </div>`;
+      }).join('');
+    }
+
+    // --- Feed ---
     function addFeed(msg, cls) {
-      const time = new Date().toLocaleTimeString();
-      feed.unshift({ time, msg, cls: cls || '' });
-      if (feed.length > 30) feed.pop();
-      renderFeed();
+      const t = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      feedItems.unshift({ t, msg, cls: cls||'' });
+      if (feedItems.length > 40) feedItems.pop();
+      const el = document.getElementById('feed');
+      el.innerHTML = feedItems.map(f =>
+        `<div class="feed-item ${f.cls}"><span class="feed-time">${f.t}</span><span class="feed-msg">${f.msg}</span></div>`
+      ).join('');
     }
 
-    function renderFeed() {
-      document.getElementById('feed').innerHTML = feed
-        .map(f => `<div class="feed-item"><span class="feed-time">${f.time}</span><span class="${f.cls}">${f.msg}</span></div>`)
-        .join('');
-    }
-
-    function renderState(state) {
-      if (!state) return;
-      gameState = state;
-
-      document.getElementById('phase').textContent = phaseDisplay(state.phase);
-      document.getElementById('point').textContent = state.point || 'OFF';
-      document.getElementById('shooter').textContent = shortAddr(state.shooter);
-      document.getElementById('playerCount').textContent = state.playerCount;
-      document.getElementById('rollCount').textContent = state.rollCount;
-
-      if (state.lastRoll) {
-        const [d1, d2] = state.lastRoll;
-        document.getElementById('die1').textContent = diceEmoji[d1] || d1;
-        document.getElementById('die2').textContent = diceEmoji[d2] || d2;
-        document.getElementById('total').textContent = `${d1 + d2}`;
-      }
-
-      // Players
-      if (state.players && state.players.length > 0) {
-        document.getElementById('players').innerHTML = state.players
-          .map(p => {
-            const addr = typeof p === 'string' ? p : p.address;
-            const chips = typeof p === 'object' && p.chips ? p.chips : null;
-            const isShooter = addr === state.shooter;
-            return `<div class="player-card ${isShooter ? 'shooter' : ''}">${shortAddr(addr)}${isShooter ? ' 🎲' : ''}${chips ? `<span class="player-chips">${formatChips(chips)}</span>` : ''}</div>`;
-          }).join('');
-      } else {
-        document.getElementById('players').innerHTML = '<span class="no-data">Waiting for players...</span>';
-      }
-
-      // Bets
-      const bets = state.activeBets || [];
-      if (bets.length > 0) {
-        document.getElementById('bets').innerHTML = bets
-          .map(b => `<div class="bet-chip">${shortAddr(b.player)} ${b.type.replace(/_/g,' ')} ${formatChips(b.amount)}</div>`)
-          .join('');
-      } else {
-        document.getElementById('bets').innerHTML = '<span class="no-data">No bets on the felt</span>';
-      }
-    }
-
-    function connectWS() {
+    // --- WebSocket ---
+    function connect() {
       ws = new WebSocket(WS_URL);
-
       ws.onopen = () => {
-        document.getElementById('connStatus').innerHTML = '<span class="connected">&#9679; Connected (Live)</span>';
+        document.getElementById('connDot').className = 'conn-dot on';
+        document.getElementById('connText').textContent = 'Live';
         addFeed('Connected to CRABS table', 'feed-win');
       };
-
-      ws.onmessage = (evt) => {
-        const msg = JSON.parse(evt.data);
-        handleEvent(msg.event, msg.data);
+      ws.onmessage = (e) => {
+        const m = JSON.parse(e.data);
+        handleEvent(m.event, m.data);
       };
-
       ws.onclose = () => {
-        document.getElementById('connStatus').innerHTML = '<span class="disconnected">&#9679; Disconnected - reconnecting...</span>';
-        setTimeout(connectWS, 3000);
+        document.getElementById('connDot').className = 'conn-dot off';
+        document.getElementById('connText').textContent = 'Reconnecting...';
+        setTimeout(connect, 3000);
       };
-
       ws.onerror = () => ws.close();
     }
 
-    function handleEvent(event, data) {
-      switch (event) {
+    function handleEvent(ev, d) {
+      switch (ev) {
         case 'connected':
-          renderState(data);
+          render(d);
           break;
-
         case 'dice_rolled':
-          document.getElementById('die1').className = 'dice rolling';
-          document.getElementById('die2').className = 'dice rolling';
+          const d1 = document.getElementById('die1');
+          const d2 = document.getElementById('die2');
+          d1.classList.add('rolling');
+          d2.classList.add('rolling');
           setTimeout(() => {
-            document.getElementById('die1').className = 'dice';
-            document.getElementById('die2').className = 'dice';
-            document.getElementById('die1').textContent = diceEmoji[data.dice[0]] || data.dice[0];
-            document.getElementById('die2').textContent = diceEmoji[data.dice[1]] || data.dice[1];
-            document.getElementById('total').textContent = `${data.total}`;
-          }, 300);
-          addFeed(`🎲 ${data.dice[0]}-${data.dice[1]} = ${data.total}`, 'feed-roll');
+            d1.classList.remove('rolling');
+            d2.classList.remove('rolling');
+            d1.textContent = DICE_FACE[d.dice[0]] || d.dice[0];
+            d2.textContent = DICE_FACE[d.dice[1]] || d.dice[1];
+            document.getElementById('diceTotal').textContent = d.total;
+          }, 400);
+          addFeed(`🎲 ${d.dice[0]} + ${d.dice[1]} = ${d.total}`, 'feed-roll');
           break;
-
         case 'ace_says':
-          document.getElementById('aceMessage').textContent = data.message;
-          addFeed(`🦞 ${data.message}`, 'feed-ace');
+          document.getElementById('aceMsg').textContent = d.message;
+          addFeed(`🦞 ${d.message}`, 'feed-ace');
           break;
-
         case 'phase_changed':
-          document.getElementById('phase').textContent = phaseDisplay(data.phase);
-          document.getElementById('point').textContent = data.point || 'OFF';
+          poll();
           break;
-
         case 'player_joined':
-          addFeed(`${shortAddr(data.address)} joined`, 'feed-win');
-          refreshState();
+          addFeed(`${short(d.address)} sat down`, 'feed-win');
+          poll();
           break;
-
         case 'player_left':
-          addFeed(`${shortAddr(data.address)} left`, '');
-          refreshState();
+          addFeed(`${short(d.address)} left`, '');
+          poll();
           break;
-
         case 'bet_placed':
-          addFeed(`${shortAddr(data.player)} bet ${formatChips(data.amount)} on ${data.betTypeName}`, 'feed-roll');
-          refreshState();
+          addFeed(`${short(d.player)} bet ${fmtChips(d.amount)} on ${d.betTypeName || d.betType}`, 'feed-roll');
+          poll();
           break;
-
         case 'bet_resolved':
-          if (data.outcome === 'won') {
-            addFeed(`${shortAddr(data.player)} WON ${formatChips(data.payout)} on ${data.betType}`, 'feed-win');
-          } else if (data.outcome === 'lost') {
-            addFeed(`${shortAddr(data.player)} lost ${formatChips(data.amount)} on ${data.betType}`, 'feed-loss');
-          }
-          refreshState();
+          if (d.outcome === 'won')
+            addFeed(`${short(d.player)} WON ${fmtChips(d.payout)} on ${d.betType}`, 'feed-win');
+          else if (d.outcome === 'lost')
+            addFeed(`${short(d.player)} lost on ${d.betType}`, 'feed-loss');
+          poll();
           break;
-
         case 'shooter_changed':
-          document.getElementById('shooter').textContent = shortAddr(data.shooter);
-          refreshState();
+          poll();
           break;
-
         case 'deposit_confirmed':
-          addFeed(`${shortAddr(data.player)} deposited ${formatChips(data.amount)} chips`, 'feed-win');
+          addFeed(`${short(d.player)} bought ${fmtChips(d.amount)} chips`, 'feed-win');
           break;
-
         case 'cashout_requested':
-          addFeed(`${shortAddr(data.player)} cashing out ${formatChips(data.amount)}`, '');
+          addFeed(`${short(d.player)} cashing out ${fmtChips(d.amount)}`, '');
           break;
       }
     }
 
-    async function refreshState() {
+    // Poll REST as fallback / after events
+    async function poll() {
       try {
-        const res = await fetch(API + '/api/table/state');
-        const state = await res.json();
-        renderState(state);
+        const r = await fetch(API + '/api/table/state');
+        if (r.ok) render(await r.json());
       } catch {}
     }
 
-    // Start WebSocket connection
-    connectWS();
-
-    // Fallback polling every 5s in case WS drops
-    setInterval(refreshState, 5000);
+    connect();
+    // Fallback poll every 3s
+    setInterval(poll, 3000);
+    // Initial poll immediately
+    poll();
   </script>
 </body>
 </html>
