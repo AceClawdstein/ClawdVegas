@@ -242,17 +242,18 @@
     .seat-empty .seat-avatar { border-color: #222; background: #111; }
     .seat-empty .seat-name { color: #333; }
 
-    /* Seat positions around the oval */
-    .seat-0 { bottom: -50px; left: 80px; }
-    .seat-1 { bottom: -50px; left: 220px; }
-    .seat-2 { bottom: -50px; left: 360px; }
-    .seat-3 { bottom: -50px; left: 500px; }
-    .seat-4 { bottom: -50px; left: 640px; }
-    .seat-5 { bottom: -50px; left: 780px; }
-    .seat-6 { top: -50px; left: 180px; }
-    .seat-7 { top: -50px; left: 380px; }
-    .seat-8 { top: -50px; left: 580px; }
-    .seat-9 { top: -50px; left: 720px; }
+    /* Seat positions around the oval — relative to outer container */
+    /* Table starts ~55px from top of container, is 480px tall => bottom edge at ~535px */
+    .seat-0 { top: 540px; left: 80px; }
+    .seat-1 { top: 540px; left: 220px; }
+    .seat-2 { top: 540px; left: 360px; }
+    .seat-3 { top: 540px; left: 500px; }
+    .seat-4 { top: 540px; left: 640px; }
+    .seat-5 { top: 540px; left: 780px; }
+    .seat-6 { top: 5px; left: 180px; }
+    .seat-7 { top: 5px; left: 380px; }
+    .seat-8 { top: 5px; left: 580px; }
+    .seat-9 { top: 5px; left: 720px; }
 
     /* --- Stickman / Ace --- */
     .stickman {
@@ -399,7 +400,7 @@
   </div>
 
   <div class="table-wrap">
-    <div style="position:relative; width:900px; height:560px;">
+    <div style="position:relative; width:900px; height:620px;">
       <!-- Stickman / Ace -->
       <div class="stickman">
         <div class="stickman-avatar">🦞</div>
@@ -434,10 +435,10 @@
 
         <!-- Chip stacks go here dynamically -->
         <div id="chipLayer"></div>
-
-        <!-- Player seats -->
-        <div class="seats" id="seats"></div>
       </div>
+
+      <!-- Player seats OUTSIDE the table (overflow:hidden clips them otherwise) -->
+      <div class="seats" id="seats"></div>
     </div>
   </div>
 
