@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClawdVegas Craps - Spectator View</title>
+  <title>ClawdVegas CRABS - Live Table</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -13,19 +13,27 @@
       min-height: 100vh;
       padding: 20px;
     }
-    .container { max-width: 900px; margin: 0 auto; }
+    .container { max-width: 960px; margin: 0 auto; }
     h1 {
       text-align: center;
       color: #ff6b6b;
       font-size: 2.5em;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
       text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
-    .subtitle { text-align: center; color: #ffd93d; margin-bottom: 30px; }
+    .subtitle { text-align: center; color: #ffd93d; margin-bottom: 20px; font-size: 0.9em; }
+    .connection-status {
+      text-align: center;
+      margin-bottom: 15px;
+      font-size: 0.8em;
+    }
+    .connected { color: #4ecdc4; }
+    .disconnected { color: #ff6b6b; }
+
     .game-board {
       background: #0d7377;
       border-radius: 20px;
-      padding: 30px;
+      padding: 25px;
       border: 8px solid #6c5b3e;
       box-shadow: 0 10px 40px rgba(0,0,0,0.5);
     }
@@ -33,19 +41,21 @@
       display: flex;
       justify-content: space-between;
       background: rgba(0,0,0,0.3);
-      padding: 15px 20px;
+      padding: 12px 15px;
       border-radius: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
-    .status-item { text-align: center; }
-    .status-label { font-size: 0.8em; color: #aaa; }
-    .status-value { font-size: 1.4em; font-weight: bold; color: #ffd93d; }
+    .status-item { text-align: center; flex: 1; }
+    .status-label { font-size: 0.7em; color: #aaa; text-transform: uppercase; }
+    .status-value { font-size: 1.3em; font-weight: bold; color: #ffd93d; }
+    .status-value.phase { font-size: 1em; }
+
     .dice-area {
       text-align: center;
-      padding: 30px;
+      padding: 25px;
       background: rgba(0,0,0,0.2);
       border-radius: 15px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
     .dice {
       display: inline-block;
@@ -58,236 +68,350 @@
       line-height: 80px;
       color: #333;
       box-shadow: 3px 3px 10px rgba(0,0,0,0.3);
+      transition: transform 0.3s;
     }
-    .total {
-      font-size: 2em;
-      margin-top: 15px;
-      color: #ffd93d;
+    .dice.rolling { animation: shake 0.3s ease-in-out; }
+    @keyframes shake {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-15deg); }
+      75% { transform: rotate(15deg); }
     }
+    .total { font-size: 1.8em; margin-top: 10px; color: #ffd93d; }
+
     .ace-box {
       background: linear-gradient(135deg, #2d1f3d 0%, #1a1a2e 100%);
       border: 3px solid #ff6b6b;
       border-radius: 15px;
-      padding: 20px;
-      margin-bottom: 20px;
+      padding: 15px;
+      margin-bottom: 15px;
     }
-    .ace-header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 10px;
+    .ace-header { display: flex; align-items: center; margin-bottom: 8px; }
+    .ace-avatar { font-size: 1.8em; margin-right: 8px; }
+    .ace-name { color: #ff6b6b; font-weight: bold; font-size: 0.9em; }
+    .ace-message { font-size: 1.1em; color: #fff; font-style: italic; min-height: 25px; }
+
+    .section { margin-bottom: 15px; }
+    .section-title { font-size: 0.85em; color: #ffd93d; margin-bottom: 8px; text-transform: uppercase; }
+
+    .players-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .player-card {
+      background: rgba(255,255,255,0.1);
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 0.85em;
     }
-    .ace-avatar { font-size: 2em; margin-right: 10px; }
-    .ace-name { color: #ff6b6b; font-weight: bold; }
-    .ace-message {
-      font-size: 1.2em;
+    .player-card.shooter {
+      background: #ff6b6b;
       color: #fff;
-      font-style: italic;
-      min-height: 30px;
+      font-weight: bold;
     }
+    .player-chips { font-size: 0.8em; color: #4ecdc4; margin-left: 5px; }
+
+    .bets-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .bet-chip {
+      background: #ffd93d;
+      color: #333;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-weight: bold;
+    }
+    .bet-chip.won { background: #4ecdc4; }
+    .bet-chip.lost { background: #ff6b6b; color: #fff; }
+
+    .no-data { color: #666; font-style: italic; font-size: 0.85em; }
+
     .feed {
       background: rgba(0,0,0,0.3);
       border-radius: 10px;
-      padding: 15px;
-      max-height: 200px;
+      padding: 12px;
+      margin-top: 15px;
+      max-height: 250px;
       overflow-y: auto;
     }
     .feed-item {
-      padding: 8px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      font-size: 0.9em;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.8em;
     }
     .feed-item:last-child { border-bottom: none; }
-    .feed-time { color: #888; margin-right: 10px; }
-    .players-section { margin-top: 20px; }
-    .player {
-      display: inline-block;
-      background: rgba(255,255,255,0.1);
-      padding: 8px 15px;
-      border-radius: 20px;
-      margin: 5px;
+    .feed-time { color: #666; margin-right: 8px; }
+    .feed-ace { color: #ff6b6b; }
+    .feed-roll { color: #ffd93d; }
+    .feed-win { color: #4ecdc4; }
+    .feed-loss { color: #ff6b6b; }
+
+    .info-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+      font-size: 0.75em;
+      color: #666;
     }
-    .player.shooter { background: #ff6b6b; color: #fff; }
-    .bets-section { margin-top: 20px; }
-    .bet {
-      display: inline-block;
-      background: #ffd93d;
-      color: #333;
-      padding: 5px 12px;
-      border-radius: 15px;
-      margin: 3px;
-      font-size: 0.85em;
-    }
-    .no-data { color: #888; font-style: italic; }
-    .refresh-btn {
-      display: block;
-      margin: 20px auto;
-      padding: 15px 40px;
-      font-size: 1.2em;
-      background: #ff6b6b;
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      font-family: inherit;
-    }
-    .refresh-btn:hover { background: #ff5252; }
-    .auto-refresh {
-      text-align: center;
-      margin-top: 10px;
-      color: #888;
-    }
-    .auto-refresh label { cursor: pointer; }
+    .info-bar a { color: #4ecdc4; text-decoration: none; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🦞 ClawdVegas Craps</h1>
-    <p class="subtitle">Live Spectator View</p>
+    <h1>CRABS</h1>
+    <p class="subtitle">ClawdVegas Live Table &bull; Real $CLAWDVEGAS Tokens</p>
+    <div class="connection-status" id="connStatus">
+      <span class="disconnected">Connecting...</span>
+    </div>
 
     <div class="game-board">
       <div class="status-bar">
         <div class="status-item">
-          <div class="status-label">PHASE</div>
-          <div class="status-value" id="phase">--</div>
+          <div class="status-label">Phase</div>
+          <div class="status-value phase" id="phase">--</div>
         </div>
         <div class="status-item">
-          <div class="status-label">POINT</div>
+          <div class="status-label">Point</div>
           <div class="status-value" id="point">OFF</div>
         </div>
         <div class="status-item">
-          <div class="status-label">SHOOTER</div>
+          <div class="status-label">Shooter</div>
           <div class="status-value" id="shooter">--</div>
         </div>
         <div class="status-item">
-          <div class="status-label">PLAYERS</div>
+          <div class="status-label">Players</div>
           <div class="status-value" id="playerCount">0</div>
+        </div>
+        <div class="status-item">
+          <div class="status-label">Rolls</div>
+          <div class="status-value" id="rollCount">0</div>
         </div>
       </div>
 
       <div class="dice-area">
         <div class="dice" id="die1">?</div>
         <div class="dice" id="die2">?</div>
-        <div class="total" id="total">Roll the dice!</div>
+        <div class="total" id="total">Waiting for shooter...</div>
       </div>
 
       <div class="ace-box">
         <div class="ace-header">
           <span class="ace-avatar">🦞</span>
-          <span class="ace-name">Ace Clawdstein says:</span>
+          <span class="ace-name">Ace Clawdstein</span>
         </div>
-        <div class="ace-message" id="aceMessage">Waiting for action...</div>
+        <div class="ace-message" id="aceMessage">The table is open. Send your bots.</div>
       </div>
 
-      <div class="players-section">
-        <strong>Players at Table:</strong>
-        <div id="players"><span class="no-data">No players yet</span></div>
+      <div class="section">
+        <div class="section-title">Players at Table</div>
+        <div class="players-grid" id="players">
+          <span class="no-data">Waiting for players...</span>
+        </div>
       </div>
 
-      <div class="bets-section">
-        <strong>Active Bets:</strong>
-        <div id="bets"><span class="no-data">No bets placed</span></div>
+      <div class="section">
+        <div class="section-title">Active Bets</div>
+        <div class="bets-grid" id="bets">
+          <span class="no-data">No bets on the felt</span>
+        </div>
       </div>
     </div>
 
     <div class="feed">
-      <strong>Activity Feed:</strong>
+      <div class="section-title" style="margin-bottom: 8px;">Live Feed</div>
       <div id="feed"></div>
     </div>
 
-    <button class="refresh-btn" onclick="refresh()">🔄 Refresh</button>
-    <div class="auto-refresh">
-      <label><input type="checkbox" id="autoRefresh" checked> Auto-refresh every 2s</label>
+    <div class="info-bar">
+      <span>Token: $CLAWDVEGAS on Base</span>
+      <span>House: 0x037C...6D7</span>
+      <span>WebSocket: Live</span>
     </div>
   </div>
 
   <script>
-    const API = 'http://localhost:3000';
+    const WS_URL = `ws://${location.host}`;
+    const API = `${location.protocol}//${location.host}`;
     const feed = [];
-    let lastRoll = null;
+    let ws;
+    let gameState = null;
 
-    const diceEmoji = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+    const diceEmoji = { 1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅' };
 
     function shortAddr(addr) {
       if (!addr || addr.length <= 12) return addr || '--';
       return addr.slice(0, 6) + '...' + addr.slice(-4);
     }
 
-    function addFeedItem(msg) {
+    function formatChips(amount) {
+      const n = Number(amount);
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000) return (n / 1000).toFixed(0) + 'K';
+      return n.toString();
+    }
+
+    function phaseDisplay(phase) {
+      const map = {
+        'waiting_for_shooter': 'WAITING',
+        'come_out_betting': 'COME OUT - BETS OPEN',
+        'come_out_roll': 'COME OUT - ROLLING',
+        'point_set_betting': 'POINT - BETS OPEN',
+        'point_roll': 'POINT - ROLLING',
+      };
+      return map[phase] || phase;
+    }
+
+    function addFeed(msg, cls) {
       const time = new Date().toLocaleTimeString();
-      feed.unshift({ time, msg });
-      if (feed.length > 20) feed.pop();
+      feed.unshift({ time, msg, cls: cls || '' });
+      if (feed.length > 30) feed.pop();
       renderFeed();
     }
 
     function renderFeed() {
       document.getElementById('feed').innerHTML = feed
-        .map(f => `<div class="feed-item"><span class="feed-time">${f.time}</span>${f.msg}</div>`)
+        .map(f => `<div class="feed-item"><span class="feed-time">${f.time}</span><span class="${f.cls}">${f.msg}</span></div>`)
         .join('');
     }
 
-    async function refresh() {
-      try {
-        const [stateRes, betsRes] = await Promise.all([
-          fetch(API + '/api/table/state'),
-          fetch(API + '/api/table/bets')
-        ]);
+    function renderState(state) {
+      if (!state) return;
+      gameState = state;
 
-        const state = await stateRes.json();
-        const betsData = await betsRes.json();
+      document.getElementById('phase').textContent = phaseDisplay(state.phase);
+      document.getElementById('point').textContent = state.point || 'OFF';
+      document.getElementById('shooter').textContent = shortAddr(state.shooter);
+      document.getElementById('playerCount').textContent = state.playerCount;
+      document.getElementById('rollCount').textContent = state.rollCount;
 
-        // Update status
-        document.getElementById('phase').textContent = state.phase.replace(/_/g, ' ');
-        document.getElementById('point').textContent = state.point || 'OFF';
-        document.getElementById('shooter').textContent = shortAddr(state.shooter);
-        document.getElementById('playerCount').textContent = state.playerCount;
+      if (state.lastRoll) {
+        const [d1, d2] = state.lastRoll;
+        document.getElementById('die1').textContent = diceEmoji[d1] || d1;
+        document.getElementById('die2').textContent = diceEmoji[d2] || d2;
+        document.getElementById('total').textContent = `${d1 + d2}`;
+      }
 
-        // Update dice
-        if (state.lastRoll) {
-          const [d1, d2] = state.lastRoll;
-          document.getElementById('die1').textContent = diceEmoji[d1] || d1;
-          document.getElementById('die2').textContent = diceEmoji[d2] || d2;
-          document.getElementById('total').textContent = `Total: ${d1 + d2}`;
+      // Players
+      if (state.players && state.players.length > 0) {
+        document.getElementById('players').innerHTML = state.players
+          .map(p => {
+            const addr = typeof p === 'string' ? p : p.address;
+            const chips = typeof p === 'object' && p.chips ? p.chips : null;
+            const isShooter = addr === state.shooter;
+            return `<div class="player-card ${isShooter ? 'shooter' : ''}">${shortAddr(addr)}${isShooter ? ' 🎲' : ''}${chips ? `<span class="player-chips">${formatChips(chips)}</span>` : ''}</div>`;
+          }).join('');
+      } else {
+        document.getElementById('players').innerHTML = '<span class="no-data">Waiting for players...</span>';
+      }
 
-          // Add to feed if new roll
-          const rollKey = `${d1}-${d2}-${state.rollCount}`;
-          if (rollKey !== lastRoll) {
-            lastRoll = rollKey;
-            addFeedItem(`🎲 Rolled ${d1}-${d2} = ${d1+d2}`);
-          }
-        }
-
-        // Update players
-        if (state.players && state.players.length > 0) {
-          document.getElementById('players').innerHTML = state.players
-            .map(p => `<span class="player ${p === state.shooter ? 'shooter' : ''}">${shortAddr(p)}${p === state.shooter ? ' 🎲' : ''}</span>`)
-            .join('');
-        } else {
-          document.getElementById('players').innerHTML = '<span class="no-data">No players yet</span>';
-        }
-
-        // Update bets
-        if (betsData.bets && betsData.bets.length > 0) {
-          document.getElementById('bets').innerHTML = betsData.bets
-            .map(b => `<span class="bet">${shortAddr(b.player)}: ${b.type} (${Number(b.amount).toLocaleString()})</span>`)
-            .join('');
-        } else {
-          document.getElementById('bets').innerHTML = '<span class="no-data">No bets placed</span>';
-        }
-
-      } catch (err) {
-        document.getElementById('aceMessage').textContent = 'Cannot connect to server...';
+      // Bets
+      const bets = state.activeBets || [];
+      if (bets.length > 0) {
+        document.getElementById('bets').innerHTML = bets
+          .map(b => `<div class="bet-chip">${shortAddr(b.player)} ${b.type.replace(/_/g,' ')} ${formatChips(b.amount)}</div>`)
+          .join('');
+      } else {
+        document.getElementById('bets').innerHTML = '<span class="no-data">No bets on the felt</span>';
       }
     }
 
-    // Auto-refresh
-    setInterval(() => {
-      if (document.getElementById('autoRefresh').checked) {
-        refresh();
-      }
-    }, 2000);
+    function connectWS() {
+      ws = new WebSocket(WS_URL);
 
-    // Initial load
-    refresh();
+      ws.onopen = () => {
+        document.getElementById('connStatus').innerHTML = '<span class="connected">&#9679; Connected (Live)</span>';
+        addFeed('Connected to CRABS table', 'feed-win');
+      };
+
+      ws.onmessage = (evt) => {
+        const msg = JSON.parse(evt.data);
+        handleEvent(msg.event, msg.data);
+      };
+
+      ws.onclose = () => {
+        document.getElementById('connStatus').innerHTML = '<span class="disconnected">&#9679; Disconnected - reconnecting...</span>';
+        setTimeout(connectWS, 3000);
+      };
+
+      ws.onerror = () => ws.close();
+    }
+
+    function handleEvent(event, data) {
+      switch (event) {
+        case 'connected':
+          renderState(data);
+          break;
+
+        case 'dice_rolled':
+          document.getElementById('die1').className = 'dice rolling';
+          document.getElementById('die2').className = 'dice rolling';
+          setTimeout(() => {
+            document.getElementById('die1').className = 'dice';
+            document.getElementById('die2').className = 'dice';
+            document.getElementById('die1').textContent = diceEmoji[data.dice[0]] || data.dice[0];
+            document.getElementById('die2').textContent = diceEmoji[data.dice[1]] || data.dice[1];
+            document.getElementById('total').textContent = `${data.total}`;
+          }, 300);
+          addFeed(`🎲 ${data.dice[0]}-${data.dice[1]} = ${data.total}`, 'feed-roll');
+          break;
+
+        case 'ace_says':
+          document.getElementById('aceMessage').textContent = data.message;
+          addFeed(`🦞 ${data.message}`, 'feed-ace');
+          break;
+
+        case 'phase_changed':
+          document.getElementById('phase').textContent = phaseDisplay(data.phase);
+          document.getElementById('point').textContent = data.point || 'OFF';
+          break;
+
+        case 'player_joined':
+          addFeed(`${shortAddr(data.address)} joined`, 'feed-win');
+          refreshState();
+          break;
+
+        case 'player_left':
+          addFeed(`${shortAddr(data.address)} left`, '');
+          refreshState();
+          break;
+
+        case 'bet_placed':
+          addFeed(`${shortAddr(data.player)} bet ${formatChips(data.amount)} on ${data.betTypeName}`, 'feed-roll');
+          refreshState();
+          break;
+
+        case 'bet_resolved':
+          if (data.outcome === 'won') {
+            addFeed(`${shortAddr(data.player)} WON ${formatChips(data.payout)} on ${data.betType}`, 'feed-win');
+          } else if (data.outcome === 'lost') {
+            addFeed(`${shortAddr(data.player)} lost ${formatChips(data.amount)} on ${data.betType}`, 'feed-loss');
+          }
+          refreshState();
+          break;
+
+        case 'shooter_changed':
+          document.getElementById('shooter').textContent = shortAddr(data.shooter);
+          refreshState();
+          break;
+
+        case 'deposit_confirmed':
+          addFeed(`${shortAddr(data.player)} deposited ${formatChips(data.amount)} chips`, 'feed-win');
+          break;
+
+        case 'cashout_requested':
+          addFeed(`${shortAddr(data.player)} cashing out ${formatChips(data.amount)}`, '');
+          break;
+      }
+    }
+
+    async function refreshState() {
+      try {
+        const res = await fetch(API + '/api/table/state');
+        const state = await res.json();
+        renderState(state);
+      } catch {}
+    }
+
+    // Start WebSocket connection
+    connectWS();
+
+    // Fallback polling every 5s in case WS drops
+    setInterval(refreshState, 5000);
   </script>
 </body>
 </html>
