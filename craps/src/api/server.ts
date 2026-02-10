@@ -18,6 +18,17 @@ import { fileURLToPath } from 'url';
 import { createTable, type CrapsTable } from '../engine/table.js';
 import { type BetType, type BetResolution } from '../engine/bets.js';
 import { ChipLedger } from '../ledger/chip-ledger.js';
+import { generateChallenge, verifyChallenge, requireAuth } from './auth.js';
+import { authRateLimit, gameRateLimit, queryRateLimit } from './ratelimit.js';
+
+// Extend Express Request to include authenticated wallet
+declare global {
+  namespace Express {
+    interface Request {
+      wallet?: string;
+    }
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,7 +54,7 @@ app.use(express.json());
 // CORS
 app.use((_req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, X-Operator-Key');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, X-Operator-Key, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   next();
 });
@@ -224,24 +235,73 @@ app.get('/api/table/bets', (_req: Request, res: Response) => {
 });
 
 /** GET /api/activity — recent activity feed */
-app.get('/api/activity', (_req: Request, res: Response) => {
+app.get('/api/activity', queryRateLimit, (_req: Request, res: Response) => {
   res.json({ activity: activityLog.slice(-50) });
 });
 
 // ===========================
-// PLAYER ENDPOINTS
+// AUTHENTICATION ENDPOINTS
 // ===========================
 
-/** POST /api/table/join — join the crabs table */
-app.post('/api/table/join', (req: Request, res: Response) => {
-  const { address } = req.body as { address?: string };
-  if (!address || typeof address !== 'string') {
-    res.status(400).json({ error: 'Missing address' });
+/** GET /api/auth/challenge — get a challenge to sign */
+app.get('/api/auth/challenge', authRateLimit, (req: Request, res: Response) => {
+  const wallet = req.query.wallet as string;
+
+  if (!wallet || typeof wallet !== 'string' || !wallet.startsWith('0x')) {
+    res.status(400).json({ error: 'Invalid wallet address' });
     return;
   }
 
+  const challenge = generateChallenge(wallet);
+  res.json({
+    nonce: challenge.nonce,
+    message: challenge.message,
+    expires: challenge.expires,
+  });
+});
+
+/** POST /api/auth/verify — verify signature and get JWT */
+app.post('/api/auth/verify', authRateLimit, async (req: Request, res: Response) => {
+  const { wallet, signature, nonce, message } = req.body as {
+    wallet?: string;
+    signature?: string;
+    nonce?: string;
+    message?: string;
+  };
+
+  if (!wallet || !signature || !nonce || !message) {
+    res.status(400).json({ error: 'Missing wallet, signature, nonce, or message' });
+    return;
+  }
+
+  const result = await verifyChallenge(
+    wallet,
+    signature as `0x${string}`,
+    nonce,
+    message
+  );
+
+  if (!result.success) {
+    res.status(401).json({ error: result.error });
+    return;
+  }
+
+  res.json({
+    token: result.token,
+    expiresAt: result.expiresAt,
+  });
+});
+
+// ===========================
+// PLAYER ENDPOINTS (Auth Required)
+// ===========================
+
+/** POST /api/table/join — join the crabs table */
+app.post('/api/table/join', gameRateLimit, requireAuth, (req: Request, res: Response) => {
+  const wallet = req.wallet!; // From auth middleware
+
   // Check player has chips
-  const balance = ledger.getBalance(address);
+  const balance = ledger.getBalance(wallet);
   if (balance <= 0n) {
     res.status(400).json({
       error: 'No chips. Send $CLAWDVEGAS tokens to the house wallet first, then ask the operator to confirm your deposit.',
@@ -251,7 +311,7 @@ app.post('/api/table/join', (req: Request, res: Response) => {
     return;
   }
 
-  const result = table.join(address);
+  const result = table.join(wallet);
   if (!result.success) {
     res.status(400).json({ error: result.error });
     return;
@@ -266,11 +326,10 @@ app.post('/api/table/join', (req: Request, res: Response) => {
 });
 
 /** POST /api/table/leave — leave the table, get refunds */
-app.post('/api/table/leave', (req: Request, res: Response) => {
-  const { address } = req.body as { address?: string };
-  if (!address) { res.status(400).json({ error: 'Missing address' }); return; }
+app.post('/api/table/leave', gameRateLimit, requireAuth, (req: Request, res: Response) => {
+  const wallet = req.wallet!;
 
-  const result = table.leave(address);
+  const result = table.leave(wallet);
   if (!result.success) {
     res.status(400).json({ error: result.error });
     return;
@@ -278,7 +337,7 @@ app.post('/api/table/leave', (req: Request, res: Response) => {
 
   // Refund active bets
   for (const bet of result.data.refundedBets) {
-    ledger.refundBet(address, bet.amount, bet.id);
+    ledger.refundBet(wallet, bet.amount, bet.id);
   }
 
   res.json({
@@ -288,20 +347,20 @@ app.post('/api/table/leave', (req: Request, res: Response) => {
       type: b.type,
       amount: b.amount.toString(),
     })),
-    chips: ledger.getBalance(address).toString(),
+    chips: ledger.getBalance(wallet).toString(),
   });
 });
 
 /** POST /api/bet/place — place a bet (deducts chips) */
-app.post('/api/bet/place', (req: Request, res: Response) => {
-  const { address, betType, amount } = req.body as {
-    address?: string;
+app.post('/api/bet/place', gameRateLimit, requireAuth, (req: Request, res: Response) => {
+  const wallet = req.wallet!;
+  const { betType, amount } = req.body as {
     betType?: string;
     amount?: string;
   };
 
-  if (!address || !betType || !amount) {
-    res.status(400).json({ error: 'Missing address, betType, or amount' });
+  if (!betType || !amount) {
+    res.status(400).json({ error: 'Missing betType or amount' });
     return;
   }
 
@@ -314,19 +373,19 @@ app.post('/api/bet/place', (req: Request, res: Response) => {
   }
 
   // Deduct chips first
-  if (!ledger.placeBet(address, amountBigInt, `pre-${Date.now()}`)) {
+  if (!ledger.placeBet(wallet, amountBigInt, `pre-${Date.now()}`)) {
     res.status(400).json({
       error: 'Insufficient chips',
-      balance: ledger.getBalance(address).toString(),
+      balance: ledger.getBalance(wallet).toString(),
       requested: amount,
     });
     return;
   }
 
-  const result = table.placeBet(address, betType as BetType, amountBigInt);
+  const result = table.placeBet(wallet, betType as BetType, amountBigInt);
   if (!result.success) {
     // Refund the chips we just deducted
-    ledger.refundBet(address, amountBigInt, 'failed-bet');
+    ledger.refundBet(wallet, amountBigInt, 'failed-bet');
     res.status(400).json({ error: result.error });
     return;
   }
@@ -338,16 +397,15 @@ app.post('/api/bet/place', (req: Request, res: Response) => {
       type: result.data.bet.type,
       amount: result.data.bet.amount.toString(),
     },
-    remainingChips: ledger.getBalance(address).toString(),
+    remainingChips: ledger.getBalance(wallet).toString(),
   });
 });
 
 /** POST /api/shooter/roll — roll the dice */
-app.post('/api/shooter/roll', (req: Request, res: Response) => {
-  const { address } = req.body as { address?: string };
-  if (!address) { res.status(400).json({ error: 'Missing address' }); return; }
+app.post('/api/shooter/roll', gameRateLimit, requireAuth, (req: Request, res: Response) => {
+  const wallet = req.wallet!;
 
-  const result = table.roll(address);
+  const result = table.roll(wallet);
   if (!result.success) {
     res.status(403).json({ error: result.error });
     return;
@@ -384,11 +442,11 @@ app.post('/api/shooter/roll', (req: Request, res: Response) => {
   });
 });
 
-/** GET /api/player/:address — player info + balance */
-app.get('/api/player/:address', (req: Request, res: Response) => {
-  const address = req.params.address ?? '';
-  const balance = ledger.getPlayerBalance(address);
-  const bets = table.getPlayerBets(address);
+/** GET /api/player/me — get my info (authenticated) */
+app.get('/api/player/me', gameRateLimit, requireAuth, (req: Request, res: Response) => {
+  const wallet = req.wallet!;
+  const balance = ledger.getPlayerBalance(wallet);
+  const bets = table.getPlayerBets(wallet);
 
   res.json({
     ...serializePlayerBalance(balance),
@@ -402,15 +460,15 @@ app.get('/api/player/:address', (req: Request, res: Response) => {
 });
 
 /** POST /api/cashout — request a cashout */
-app.post('/api/cashout', (req: Request, res: Response) => {
-  const { address, amount, toAddress } = req.body as {
-    address?: string;
+app.post('/api/cashout', gameRateLimit, requireAuth, (req: Request, res: Response) => {
+  const wallet = req.wallet!;
+  const { amount, toAddress } = req.body as {
     amount?: string;
     toAddress?: string;
   };
 
-  if (!address || !amount) {
-    res.status(400).json({ error: 'Missing address or amount' });
+  if (!amount) {
+    res.status(400).json({ error: 'Missing amount' });
     return;
   }
 
@@ -423,7 +481,7 @@ app.post('/api/cashout', (req: Request, res: Response) => {
   }
 
   try {
-    const request = ledger.requestCashout(address, amountBigInt, toAddress ?? address);
+    const request = ledger.requestCashout(wallet, amountBigInt, toAddress ?? wallet);
     res.json({
       success: true,
       cashout: {
@@ -432,11 +490,32 @@ app.post('/api/cashout', (req: Request, res: Response) => {
         toAddress: request.toAddress,
         status: request.status,
       },
-      remainingChips: ledger.getBalance(address).toString(),
+      remainingChips: ledger.getBalance(wallet).toString(),
     });
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
+});
+
+// ===========================
+// PUBLIC PLAYER INFO (no auth)
+// ===========================
+
+/** GET /api/player/:address — player info + balance (public) */
+app.get('/api/player/:address', queryRateLimit, (req: Request, res: Response) => {
+  const address = req.params.address ?? '';
+  const balance = ledger.getPlayerBalance(address);
+  const bets = table.getPlayerBets(address);
+
+  res.json({
+    ...serializePlayerBalance(balance),
+    activeBets: bets.map(b => ({
+      id: b.id,
+      type: b.type,
+      amount: b.amount.toString(),
+      comePoint: b.comePoint,
+    })),
+  });
 });
 
 // ===========================
@@ -633,7 +712,7 @@ export { app, server, table, ledger };
 export function startServer(port: number = 3000): void {
   server.listen(port, () => {
     console.log(`
-\x1b[31m🦞 ClawdVegas CRABS Server v2.0\x1b[0m
+\x1b[31m🦞 ClawdVegas CRABS Server v2.1 (Secure)\x1b[0m
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Server:     http://localhost:${port}
@@ -644,18 +723,27 @@ export function startServer(port: number = 3000): void {
   House:      ${HOUSE_WALLET}
   Chain:      Base
 
-  Agent API Endpoints:
+  Authentication (required for player actions):
+  ─────────────────────────────────────────────────
+  GET  /api/auth/challenge?wallet=0x...  Get challenge to sign
+  POST /api/auth/verify                   Verify signature, get JWT
+
+  Public Endpoints:
   ─────────────────────────────────────────────────
   GET  /api/health              Health + config
   GET  /api/table/state         Full game state
   GET  /api/table/bets          Active bets
   GET  /api/activity            Activity feed
-  POST /api/table/join          Join  { address }
-  POST /api/table/leave         Leave { address }
-  POST /api/bet/place           Bet   { address, betType, amount }
-  POST /api/shooter/roll        Roll  { address }
-  GET  /api/player/:addr        Player info + balance
-  POST /api/cashout             Cashout { address, amount }
+  GET  /api/player/:addr        Player info (public)
+
+  Player Endpoints (Authorization: Bearer <token>):
+  ─────────────────────────────────────────────────
+  POST /api/table/join          Join table
+  POST /api/table/leave         Leave table
+  POST /api/bet/place           Place bet { betType, amount }
+  POST /api/shooter/roll        Roll dice
+  GET  /api/player/me           My info + balance
+  POST /api/cashout             Cashout { amount }
 
   Operator Endpoints (X-Operator-Key header):
   ─────────────────────────────────────────────────
@@ -667,6 +755,13 @@ export function startServer(port: number = 3000): void {
 
   Bet Types: pass_line, dont_pass, come, dont_come,
              place_4..10, ce_craps, ce_eleven
+
+  Security Features:
+  ─────────────────────────────────────────────────
+  ✓ EIP-191 wallet signature authentication
+  ✓ JWT session tokens (24h expiry)
+  ✓ Rate limiting on all endpoints
+  ✓ Offchain chip ledger with persistence
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     `);
