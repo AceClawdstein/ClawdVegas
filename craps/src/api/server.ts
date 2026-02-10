@@ -325,9 +325,24 @@ app.post('/api/table/join', gameRateLimit, requireAuth, (req: Request, res: Resp
   });
 });
 
-/** POST /api/table/leave — leave the table, get refunds */
+/** POST /api/table/leave — leave the table (only if no active bets) */
 app.post('/api/table/leave', gameRateLimit, requireAuth, (req: Request, res: Response) => {
   const wallet = req.wallet!;
+
+  // SECURITY: Block leaving if player has active bets
+  // This prevents the exploit where players leave to avoid losses
+  const activeBets = table.getPlayerBets(wallet);
+  if (activeBets.length > 0) {
+    res.status(400).json({
+      error: 'Cannot leave with active bets. Wait for bets to resolve or the round to end.',
+      activeBets: activeBets.map(b => ({
+        id: b.id,
+        type: b.type,
+        amount: b.amount.toString(),
+      })),
+    });
+    return;
+  }
 
   const result = table.leave(wallet);
   if (!result.success) {
@@ -335,18 +350,8 @@ app.post('/api/table/leave', gameRateLimit, requireAuth, (req: Request, res: Res
     return;
   }
 
-  // Refund active bets
-  for (const bet of result.data.refundedBets) {
-    ledger.refundBet(wallet, bet.amount, bet.id);
-  }
-
   res.json({
     success: true,
-    refundedBets: result.data.refundedBets.map(b => ({
-      id: b.id,
-      type: b.type,
-      amount: b.amount.toString(),
-    })),
     chips: ledger.getBalance(wallet).toString(),
   });
 });
@@ -367,9 +372,40 @@ app.post('/api/bet/place', gameRateLimit, requireAuth, (req: Request, res: Respo
   let amountBigInt: bigint;
   try {
     amountBigInt = BigInt(amount);
+    if (amountBigInt <= 0n) {
+      res.status(400).json({ error: 'Amount must be positive' });
+      return;
+    }
   } catch {
     res.status(400).json({ error: 'Invalid amount' });
     return;
+  }
+
+  // Check table limits
+  const config = table.getConfig();
+  if (amountBigInt < config.minBet) {
+    res.status(400).json({ error: `Minimum bet is ${config.minBet}`, minBet: config.minBet.toString() });
+    return;
+  }
+  if (amountBigInt > config.maxBet) {
+    res.status(400).json({ error: `Maximum bet is ${config.maxBet}`, maxBet: config.maxBet.toString() });
+    return;
+  }
+
+  // SECURITY: Prevent duplicate contract bets (Vegas rules)
+  // Only one Pass Line, Don't Pass, Come, Don't Come, or Place bet per number
+  const playerBets = table.getPlayerBets(wallet);
+  const contractBetTypes: BetType[] = ['pass_line', 'dont_pass', 'come', 'dont_come',
+    'place_4', 'place_5', 'place_6', 'place_8', 'place_9', 'place_10'];
+  if (contractBetTypes.includes(betType as BetType)) {
+    const existingBet = playerBets.find(b => b.type === betType);
+    if (existingBet) {
+      res.status(400).json({
+        error: `Already have a ${betType} bet. Only one allowed per player.`,
+        existingBet: { id: existingBet.id, amount: existingBet.amount.toString() },
+      });
+      return;
+    }
   }
 
   // Deduct chips first
