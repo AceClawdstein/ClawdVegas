@@ -870,6 +870,111 @@ app.get('/api/operator/ledger', requireOperator, (req: Request, res: Response) =
   });
 });
 
+/** POST /api/operator/demo — simulate agent gameplay for testing */
+app.post('/api/operator/demo', requireOperator, async (req: Request, res: Response) => {
+  const { rounds = 5 } = req.body as { rounds?: number };
+  const results: Array<{ round: number; phase: string; action: string; result: unknown }> = [];
+
+  const DEMO_AGENTS = [
+    '0xDemoAgent_Claudio_001',
+    '0xDemoAgent_MaxBot_002',
+  ];
+
+  // Fund agents
+  for (const agent of DEMO_AGENTS) {
+    try {
+      ledger.confirmDeposit(agent, 1000000n, `demo_deposit_${Date.now()}`);
+    } catch { /* already funded */ }
+  }
+
+  // Join agents
+  for (const agent of DEMO_AGENTS) {
+    const joinResult = table.join(agent);
+    if (joinResult.success) {
+      results.push({ round: 0, phase: 'setup', action: `${agent.slice(0, 20)} joined`, result: joinResult });
+    }
+  }
+
+  // Play rounds
+  for (let r = 1; r <= Math.min(rounds, 10); r++) {
+    const state = table.getState();
+    const phase = state.phase;
+
+    if (phase === 'waiting_for_shooter') {
+      results.push({ round: r, phase, action: 'waiting', result: 'no players' });
+      continue;
+    }
+
+    // Place bets if betting is open
+    if (phase === 'come_out_betting' || phase === 'point_set_betting') {
+      for (const agent of DEMO_AGENTS) {
+        const betType = phase === 'come_out_betting' ? 'pass_line' : 'come';
+        const amount = 50000n;
+        const balance = ledger.getBalance(agent);
+        if (balance >= amount) {
+          const deducted = ledger.placeBet(agent, amount, `bet_${Date.now()}`);
+          if (deducted) {
+            const betResult = table.placeBet(agent, betType as BetType, amount);
+            if (betResult.success) {
+              results.push({ round: r, phase, action: `${agent.slice(0, 16)} bet ${betType}`, result: 'placed' });
+            } else {
+              ledger.refundBet(agent, amount, `refund_${Date.now()}`);
+            }
+          }
+        }
+      }
+    }
+
+    // Roll dice
+    const shooter = state.shooter;
+    if (shooter && (phase === 'come_out_betting' || phase === 'point_set_betting')) {
+      const rollResult = table.roll(shooter);
+      if (rollResult.success) {
+        const { dice, resolutions } = rollResult.data;
+        results.push({
+          round: r,
+          phase,
+          action: `${shooter.slice(0, 16)} rolled ${dice[0]}-${dice[1]}`,
+          result: resolutions.map(res => ({
+            player: res.bet.player.slice(0, 16),
+            bet: res.bet.type,
+            outcome: res.outcome,
+            payout: res.payout.toString(),
+          })),
+        });
+
+        // Credit winnings
+        for (const res of resolutions) {
+          if (res.outcome === 'won') {
+            ledger.betWon(res.bet.player, res.payout, res.bet.id);
+          } else if (res.outcome === 'pushed') {
+            ledger.betPushed(res.bet.player, res.payout, res.bet.id);
+          } else if (res.outcome === 'lost') {
+            ledger.betLost(res.bet.player, res.bet.amount, res.bet.id);
+          }
+        }
+      }
+    }
+  }
+
+  // Final balances
+  const balances = DEMO_AGENTS.map(a => ({
+    agent: a.slice(0, 20),
+    chips: ledger.getBalance(a).toString(),
+  }));
+
+  res.json({
+    success: true,
+    rounds: results,
+    finalBalances: balances,
+    tableState: {
+      phase: table.getState().phase,
+      point: table.getState().point,
+      players: table.getState().players.length,
+    },
+  });
+});
+
 // ===========================
 // WebSocket handling
 // ===========================
