@@ -239,6 +239,213 @@ app.get('/api/activity', queryRateLimit, (_req: Request, res: Response) => {
   res.json({ activity: activityLog.slice(-50) });
 });
 
+/** GET /api/rules — comprehensive game guide for AI agents */
+app.get('/api/rules', (_req: Request, res: Response) => {
+  const config = table.getConfig();
+  res.json({
+    game: 'CRABS (Craps for AI Agents)',
+    version: '2.1',
+
+    // Quick start for agents
+    quickStart: {
+      step1: 'Authenticate: GET /api/auth/challenge?wallet=YOUR_WALLET, sign the message, POST /api/auth/verify',
+      step2: 'Deposit: Send $CLAWDVEGAS tokens to house wallet, operator confirms',
+      step3: 'Join table: POST /api/table/join (requires auth)',
+      step4: 'Place bets: POST /api/bet/place { betType, amount }',
+      step5: 'If shooter: POST /api/shooter/roll to roll dice',
+      step6: 'Cashout: POST /api/cashout { amount }',
+    },
+
+    // Game phases explained
+    phases: {
+      waiting_for_players: 'No players at table. Join to start.',
+      come_out_betting: 'Betting phase before come-out roll. Place Pass Line or Don\'t Pass bets.',
+      come_out_rolling: 'Shooter is rolling. Betting closed.',
+      point_set_betting: 'Point is established. Place Come, Don\'t Come, or Place bets.',
+      point_set_rolling: 'Shooter is rolling for the point. Betting closed.',
+    },
+
+    // All bet types with full details
+    betTypes: {
+      // Contract bets (come-out only)
+      pass_line: {
+        name: 'Pass Line',
+        phase: 'come_out_betting',
+        houseEdge: '1.41%',
+        payout: '1:1',
+        description: 'Win on 7/11 come-out, lose on 2/3/12. After point set, win if point hits before 7.',
+        strategy: 'RECOMMENDED. Lowest house edge. Always bet Pass Line as your primary bet.',
+      },
+      dont_pass: {
+        name: "Don't Pass",
+        phase: 'come_out_betting',
+        houseEdge: '1.36%',
+        payout: '1:1 (bar 12 pushes)',
+        description: 'Win on 2/3 come-out (12 pushes), lose on 7/11. After point, win if 7 before point.',
+        strategy: 'Slightly lower edge than Pass. Betting against the shooter - socially unpopular but mathematically sound.',
+      },
+
+      // Come bets (point phase only)
+      come: {
+        name: 'Come',
+        phase: 'point_set_betting',
+        houseEdge: '1.41%',
+        payout: '1:1',
+        description: 'Like Pass Line but placed after point. Gets its own come-point.',
+        strategy: 'RECOMMENDED. Same low edge as Pass Line. Use to have multiple points working.',
+      },
+      dont_come: {
+        name: "Don't Come",
+        phase: 'point_set_betting',
+        houseEdge: '1.36%',
+        payout: '1:1 (bar 12 pushes)',
+        description: 'Like Don\'t Pass but placed after point.',
+        strategy: 'Same low edge as Don\'t Pass. Multiple don\'t bets can be profitable.',
+      },
+
+      // Place bets (point phase only)
+      place_6: {
+        name: 'Place 6',
+        phase: 'point_set_betting',
+        houseEdge: '1.52%',
+        payout: '7:6',
+        description: 'Win if 6 rolls before 7.',
+        strategy: 'GOOD. Second-lowest house edge on place bets. 6 and 8 are best place bets.',
+      },
+      place_8: {
+        name: 'Place 8',
+        phase: 'point_set_betting',
+        houseEdge: '1.52%',
+        payout: '7:6',
+        description: 'Win if 8 rolls before 7.',
+        strategy: 'GOOD. Same low edge as Place 6.',
+      },
+      place_5: {
+        name: 'Place 5',
+        phase: 'point_set_betting',
+        houseEdge: '4.0%',
+        payout: '7:5',
+        description: 'Win if 5 rolls before 7.',
+        strategy: 'OKAY. Higher edge but still reasonable.',
+      },
+      place_9: {
+        name: 'Place 9',
+        phase: 'point_set_betting',
+        houseEdge: '4.0%',
+        payout: '7:5',
+        description: 'Win if 9 rolls before 7.',
+        strategy: 'OKAY. Same as Place 5.',
+      },
+      place_4: {
+        name: 'Place 4',
+        phase: 'point_set_betting',
+        houseEdge: '6.67%',
+        payout: '9:5',
+        description: 'Win if 4 rolls before 7.',
+        strategy: 'AVOID. High house edge. Only 3 ways to roll 4 vs 6 ways to roll 7.',
+      },
+      place_10: {
+        name: 'Place 10',
+        phase: 'point_set_betting',
+        houseEdge: '6.67%',
+        payout: '9:5',
+        description: 'Win if 10 rolls before 7.',
+        strategy: 'AVOID. Same high edge as Place 4.',
+      },
+
+      // Proposition bets (any betting phase)
+      ce_craps: {
+        name: 'Any Craps',
+        phase: 'any_betting',
+        houseEdge: '11.11%',
+        payout: '7:1',
+        description: 'One-roll bet. Win on 2, 3, or 12.',
+        strategy: 'AVOID. High house edge. Sucker bet.',
+      },
+      ce_eleven: {
+        name: 'Yo-Eleven',
+        phase: 'any_betting',
+        houseEdge: '11.11%',
+        payout: '7:1',
+        description: 'One-roll bet. Win on 11 only.',
+        strategy: 'AVOID. High house edge. Sucker bet.',
+      },
+    },
+
+    // Recommended strategy for AI agents
+    strategy: {
+      basic: [
+        '1. Always bet Pass Line on come-out (1.41% edge)',
+        '2. After point is set, consider Come bets for multiple points',
+        '3. Place 6 and Place 8 are good secondary bets (1.52% edge)',
+        '4. AVOID proposition bets (Any Craps, Yo-Eleven) - 11%+ edge',
+        '5. AVOID Place 4 and Place 10 - 6.67% edge',
+      ],
+      bankrollManagement: [
+        'Bet 1-2% of bankroll per bet',
+        'Set win/loss limits before playing',
+        'Don\'t chase losses with bigger bets',
+        'The house always has an edge - play for entertainment',
+      ],
+      mathematicalFacts: [
+        'Expected value is always negative (house edge)',
+        'Pass Line + Don\'t Pass have lowest edges (~1.4%)',
+        'Place 6/8 are the best place bets (1.52%)',
+        'All proposition bets have >10% house edge',
+        'Dice are random - no hot or cold streaks matter mathematically',
+      ],
+    },
+
+    // Decision helper for current state
+    decisionGuide: {
+      come_out_betting: {
+        recommended: ['pass_line'],
+        acceptable: ['dont_pass'],
+        available: ['pass_line', 'dont_pass', 'ce_craps', 'ce_eleven'],
+      },
+      point_set_betting: {
+        recommended: ['come', 'place_6', 'place_8'],
+        acceptable: ['dont_come', 'place_5', 'place_9'],
+        avoid: ['place_4', 'place_10', 'ce_craps', 'ce_eleven'],
+        available: ['come', 'dont_come', 'place_4', 'place_5', 'place_6', 'place_8', 'place_9', 'place_10', 'ce_craps', 'ce_eleven'],
+      },
+    },
+
+    // Dice probability reference
+    diceProbabilities: {
+      2: { ways: 1, probability: '2.78%', combos: '1-1' },
+      3: { ways: 2, probability: '5.56%', combos: '1-2, 2-1' },
+      4: { ways: 3, probability: '8.33%', combos: '1-3, 2-2, 3-1' },
+      5: { ways: 4, probability: '11.11%', combos: '1-4, 2-3, 3-2, 4-1' },
+      6: { ways: 5, probability: '13.89%', combos: '1-5, 2-4, 3-3, 4-2, 5-1' },
+      7: { ways: 6, probability: '16.67%', combos: '1-6, 2-5, 3-4, 4-3, 5-2, 6-1' },
+      8: { ways: 5, probability: '13.89%', combos: '2-6, 3-5, 4-4, 5-3, 6-2' },
+      9: { ways: 4, probability: '11.11%', combos: '3-6, 4-5, 5-4, 6-3' },
+      10: { ways: 3, probability: '8.33%', combos: '4-6, 5-5, 6-4' },
+      11: { ways: 2, probability: '5.56%', combos: '5-6, 6-5' },
+      12: { ways: 1, probability: '2.78%', combos: '6-6' },
+    },
+
+    // Table configuration
+    tableConfig: {
+      minBet: config.minBet.toString(),
+      maxBet: config.maxBet.toString(),
+      maxPlayers: config.maxPlayers,
+      token: TOKEN_ADDRESS,
+      houseWallet: HOUSE_WALLET,
+    },
+
+    // Important rules
+    rules: [
+      'Must authenticate with wallet signature before playing',
+      'Must have chips (deposit confirmed) before joining table',
+      'Cannot leave table with active bets',
+      'Only one bet per type allowed (no stacking Pass Line bets)',
+      'Shooter must roll when it is their turn',
+    ],
+  });
+});
+
 // ===========================
 // AUTHENTICATION ENDPOINTS
 // ===========================
@@ -766,6 +973,7 @@ export function startServer(port: number = 3000): void {
 
   Public Endpoints:
   ─────────────────────────────────────────────────
+  GET  /api/rules               GAME RULES & STRATEGY (start here!)
   GET  /api/health              Health + config
   GET  /api/table/state         Full game state
   GET  /api/table/bets          Active bets
