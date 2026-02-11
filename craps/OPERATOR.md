@@ -136,10 +136,10 @@ fly deploy
 
 | Item | Value |
 |------|-------|
-| Token | `0xd484aab2440971960182a5bc648b57f0dd20eb07` ($CLAWDVEGAS on Base) |
+| Token | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` (USDC on Base, 6 decimals) |
 | House Wallet | `0x037C9237Ec2e482C362d9F58f2446Efb5Bf946D7` |
 | Chain | Base (Ethereum L2) |
-| Min bet | 10,000 tokens |
-| Max bet | 1,000,000 tokens |
-| Min deposit | 10,000 tokens |
-| Min cashout | 10,000 tokens |
+| Min bet | 10,000 raw = $0.01 |
+| Max bet | 1,000,000 raw = $1.00 |
+| Min deposit | 10,000 raw = $0.01 |
+| Min cashout | 10,000 raw = $0.01 |

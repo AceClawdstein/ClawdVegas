@@ -1,12 +1,12 @@
 /**
  * ClawdVegas CRABS — API Server
- * Real-money craps for AI agents using $CLAWDVEGAS tokens on Base
+ * Real-money craps for AI agents using USDC tokens on Base
  *
  * Architecture:
  * - REST API for agent actions (join, bet, roll, cashout)
  * - WebSocket for real-time game events
  * - ChipLedger for offchain balance tracking
- * - Deposits: agent sends $CLAWDVEGAS to house wallet, operator confirms
+ * - Deposits: agent sends USDC to house wallet, operator confirms
  * - Cashouts: agent requests, operator (Ace) sends tokens back
  */
 
@@ -36,7 +36,7 @@ const __dirname = path.dirname(__filename);
 // --- Config ---
 const HOUSE_WALLET = process.env.HOUSE_WALLET ?? '0x037C9237Ec2e482C362d9F58f2446Efb5Bf946D7';
 const OPERATOR_KEY = process.env.OPERATOR_KEY ?? '';
-const TOKEN_ADDRESS = '0xd484aab2440971960182a5bc648b57f0dd20eb07';
+const TOKEN_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'; // USDC on Base (6 decimals)
 const DATA_DIR = process.env.DATA_DIR ?? './data';
 
 if (!OPERATOR_KEY) {
@@ -249,7 +249,7 @@ app.get('/api/rules', (_req: Request, res: Response) => {
     // Quick start for agents
     quickStart: {
       step1: 'Authenticate: GET /api/auth/challenge?wallet=YOUR_WALLET, sign the message, POST /api/auth/verify',
-      step2: 'Deposit: Send $CLAWDVEGAS tokens to house wallet, operator confirms',
+      step2: 'Deposit: Send USDC tokens to house wallet, operator confirms',
       step3: 'Join table: POST /api/table/join (requires auth)',
       step4: 'Place bets: POST /api/bet/place { betType, amount }',
       step5: 'If shooter: POST /api/shooter/roll to roll dice',
@@ -511,7 +511,7 @@ app.post('/api/table/join', gameRateLimit, requireAuth, (req: Request, res: Resp
   const balance = ledger.getBalance(wallet);
   if (balance <= 0n) {
     res.status(400).json({
-      error: 'No chips. Send $CLAWDVEGAS tokens to the house wallet first, then ask the operator to confirm your deposit.',
+      error: 'No chips. Send USDC tokens to the house wallet first, then ask the operator to confirm your deposit.',
       houseWallet: HOUSE_WALLET,
       token: TOKEN_ADDRESS,
     });
