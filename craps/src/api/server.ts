@@ -872,51 +872,68 @@ app.get('/api/operator/ledger', requireOperator, (req: Request, res: Response) =
 
 /** POST /api/operator/demo — simulate agent gameplay for testing */
 app.post('/api/operator/demo', requireOperator, async (req: Request, res: Response) => {
-  const { rounds = 5 } = req.body as { rounds?: number };
+  const { rounds = 5, agents } = req.body as { rounds?: number; agents?: string[] };
   const results: Array<{ round: number; phase: string; action: string; result: unknown }> = [];
 
-  const DEMO_AGENTS = [
-    '0xDemoAgent_Claudio_001',
-    '0xDemoAgent_MaxBot_002',
-  ];
+  const DEMO_AGENTS = agents && agents.length > 0
+    ? agents
+    : ['0xAceClawdstein_Demo', '0xGLaDOS_DemoBot', '0xQuantBot_Demo'];
 
-  // Fund agents
-  for (const agent of DEMO_AGENTS) {
-    try {
-      ledger.confirmDeposit(agent, 1000000n, `demo_deposit_${Date.now()}`);
-    } catch { /* already funded */ }
-  }
+  const CO_BETS: BetType[] = ['pass_line', 'dont_pass', 'pass_line', 'pass_line'];
+  const PT_BETS: BetType[] = ['come', 'dont_come', 'place_6', 'place_8', 'place_4', 'place_10'];
+  const AMOUNTS = [50000n, 75000n, 100000n, 150000n, 80000n, 120000n];
 
-  // Join agents
+  function randomFrom<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]!; }
+
+  // Fund agents (only if they need it)
   for (const agent of DEMO_AGENTS) {
-    const joinResult = table.join(agent);
-    if (joinResult.success) {
-      results.push({ round: 0, phase: 'setup', action: `${agent.slice(0, 20)} joined`, result: joinResult });
+    if (ledger.getBalance(agent) < 500000n) {
+      try {
+        ledger.confirmDeposit(agent, 2000000n, `demo_${Date.now()}_${Math.random().toString(36).slice(2,6)}`);
+        results.push({ round: 0, phase: 'setup', action: `${shortAddr(agent)} funded 2M`, result: 'ok' });
+      } catch { /* already funded or dupe tx */ }
     }
   }
 
-  // Play rounds
-  for (let r = 1; r <= Math.min(rounds, 10); r++) {
-    const state = table.getState();
-    const phase = state.phase;
+  // Ensure agents are at the table
+  function ensureJoined(): void {
+    for (const agent of DEMO_AGENTS) {
+      const joinResult = table.join(agent);
+      if (joinResult.success) {
+        results.push({ round: 0, phase: 'setup', action: `${shortAddr(agent)} joined`, result: 'ok' });
+      }
+    }
+  }
 
+  ensureJoined();
+
+  // Play rounds
+  const maxRounds = Math.min(rounds, 30);
+  for (let r = 1; r <= maxRounds; r++) {
+    let state = table.getState();
+    let phase = state.phase;
+
+    // Handle waiting_for_shooter: leave all and rejoin to reset
     if (phase === 'waiting_for_shooter') {
-      results.push({ round: r, phase, action: 'waiting', result: 'no players' });
-      continue;
+      for (const agent of DEMO_AGENTS) { table.leave(agent); }
+      ensureJoined();
+      state = table.getState();
+      phase = state.phase;
+      if (phase === 'waiting_for_shooter') continue; // still stuck, skip
     }
 
     // Place bets if betting is open
     if (phase === 'come_out_betting' || phase === 'point_set_betting') {
       for (const agent of DEMO_AGENTS) {
-        const betType = phase === 'come_out_betting' ? 'pass_line' : 'come';
-        const amount = 50000n;
+        const betType = phase === 'come_out_betting' ? randomFrom(CO_BETS) : randomFrom(PT_BETS);
+        const amount = randomFrom(AMOUNTS);
         const balance = ledger.getBalance(agent);
         if (balance >= amount) {
-          const deducted = ledger.placeBet(agent, amount, `bet_${Date.now()}`);
+          const deducted = ledger.placeBet(agent, amount, `bet_${Date.now()}_${Math.random().toString(36).slice(2,6)}`);
           if (deducted) {
-            const betResult = table.placeBet(agent, betType as BetType, amount);
+            const betResult = table.placeBet(agent, betType, amount);
             if (betResult.success) {
-              results.push({ round: r, phase, action: `${agent.slice(0, 16)} bet ${betType}`, result: 'placed' });
+              results.push({ round: r, phase, action: `${shortAddr(agent)} bet ${formatAmount(amount)} on ${betType}`, result: 'placed' });
             } else {
               ledger.refundBet(agent, amount, `refund_${Date.now()}`);
             }
@@ -926,32 +943,29 @@ app.post('/api/operator/demo', requireOperator, async (req: Request, res: Respon
     }
 
     // Roll dice
-    const shooter = state.shooter;
-    if (shooter && (phase === 'come_out_betting' || phase === 'point_set_betting')) {
+    const shooter = table.getState().shooter;
+    if (shooter) {
       const rollResult = table.roll(shooter);
       if (rollResult.success) {
         const { dice, resolutions } = rollResult.data;
+        const total = dice[0] + dice[1];
         results.push({
           round: r,
           phase,
-          action: `${shooter.slice(0, 16)} rolled ${dice[0]}-${dice[1]}`,
-          result: resolutions.map(res => ({
-            player: res.bet.player.slice(0, 16),
-            bet: res.bet.type,
-            outcome: res.outcome,
-            payout: res.payout.toString(),
+          action: `${shortAddr(shooter)} rolled ${dice[0]}+${dice[1]}=${total}`,
+          result: resolutions.map(rr => ({
+            player: shortAddr(rr.bet.player),
+            bet: rr.bet.type,
+            outcome: rr.outcome,
+            payout: rr.payout.toString(),
           })),
         });
 
-        // Credit winnings
-        for (const res of resolutions) {
-          if (res.outcome === 'won') {
-            ledger.betWon(res.bet.player, res.payout, res.bet.id);
-          } else if (res.outcome === 'pushed') {
-            ledger.betPushed(res.bet.player, res.payout, res.bet.id);
-          } else if (res.outcome === 'lost') {
-            ledger.betLost(res.bet.player, res.bet.amount, res.bet.id);
-          }
+        // Credit winnings through ledger
+        for (const rr of resolutions) {
+          if (rr.outcome === 'won') ledger.betWon(rr.bet.player, rr.payout, rr.bet.id);
+          else if (rr.outcome === 'pushed') ledger.betPushed(rr.bet.player, rr.payout, rr.bet.id);
+          else if (rr.outcome === 'lost') ledger.betLost(rr.bet.player, rr.bet.amount, rr.bet.id);
         }
       }
     }
@@ -959,12 +973,14 @@ app.post('/api/operator/demo', requireOperator, async (req: Request, res: Respon
 
   // Final balances
   const balances = DEMO_AGENTS.map(a => ({
-    agent: a.slice(0, 20),
+    agent: shortAddr(a),
+    address: a,
     chips: ledger.getBalance(a).toString(),
   }));
 
   res.json({
     success: true,
+    roundsPlayed: results.filter(r => r.round > 0).length,
     rounds: results,
     finalBalances: balances,
     tableState: {
