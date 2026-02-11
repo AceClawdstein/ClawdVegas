@@ -18,6 +18,7 @@ import { fileURLToPath } from 'url';
 import { createTable, type CrapsTable } from '../engine/table.js';
 import { type BetType, type BetResolution } from '../engine/bets.js';
 import { ChipLedger } from '../ledger/chip-ledger.js';
+import { startDepositWatcher } from '../ledger/deposit-watcher.js';
 import { generateChallenge, verifyChallenge, requireAuth } from './auth.js';
 import { authRateLimit, gameRateLimit, queryRateLimit } from './ratelimit.js';
 
@@ -1127,8 +1128,24 @@ export function startServer(port: number = 3000): void {
   ✓ JWT session tokens (24h expiry)
   ✓ Rate limiting on all endpoints
   ✓ Offchain chip ledger with persistence
+  ✓ Auto deposit detection (Base RPC polling)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     `);
+
+    // Start watching Base for incoming USDC deposits
+    startDepositWatcher({
+      tokenAddress: TOKEN_ADDRESS,
+      houseWallet: HOUSE_WALLET,
+      ledger,
+      pollIntervalMs: 15_000,
+      onDeposit: (player, amount, txHash) => {
+        broadcast('deposit_confirmed', {
+          player,
+          amount: amount.toString(),
+          txHash,
+        });
+      },
+    });
   });
 }
