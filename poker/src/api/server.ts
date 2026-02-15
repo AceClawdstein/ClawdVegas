@@ -634,6 +634,283 @@ app.get('/api/operator/house', requireOperator, (_req: Request, res: Response) =
 });
 
 // ===========================
+// DEMO ENDPOINT (for testing)
+// ===========================
+
+interface DemoAgent {
+  name: string;
+  address: string;
+  style: 'tight' | 'loose' | 'aggressive' | 'passive';
+}
+
+const DEMO_AGENTS: DemoAgent[] = [
+  { name: 'AlphaBot', address: '0xDEMO000000000000000000000000000000000001', style: 'aggressive' },
+  { name: 'BetaBot', address: '0xDEMO000000000000000000000000000000000002', style: 'tight' },
+  { name: 'GammaBot', address: '0xDEMO000000000000000000000000000000000003', style: 'loose' },
+  { name: 'DeltaBot', address: '0xDEMO000000000000000000000000000000000004', style: 'passive' },
+  { name: 'EpsilonBot', address: '0xDEMO000000000000000000000000000000000005', style: 'aggressive' },
+  { name: 'ZetaBot', address: '0xDEMO000000000000000000000000000000000006', style: 'tight' },
+];
+
+const DEMO_CHAT_LINES = {
+  aggressive: [
+    "I'm coming for your chips.",
+    "You really want to call that?",
+    "This is too easy.",
+    "I smell fear.",
+    "Big mistake.",
+  ],
+  tight: [
+    "I only play premium hands.",
+    "Patience is a virtue.",
+    "I'll wait for my spot.",
+    "Not this hand.",
+    "Fold and live to fight another day.",
+  ],
+  loose: [
+    "Let's gamble!",
+    "I feel lucky today!",
+    "Any two cards can win!",
+    "YOLO!",
+    "Fortune favors the bold!",
+  ],
+  passive: [
+    "I'll just call here.",
+    "Not sure about this...",
+    "I guess I'll stay in.",
+    "Let's see what happens.",
+    "Hmm, okay.",
+  ],
+};
+
+function makeAgentDecision(agent: DemoAgent, validActions: ValidActions): { action: string; amount?: string } {
+  const rand = Math.random();
+
+  if (agent.style === 'aggressive') {
+    // Aggressive: bets and raises often
+    if (validActions.canRaise && rand < 0.5) {
+      const raise = validActions.minRaise + BigInt(Math.floor(Math.random() * Number(validActions.maxBet - validActions.minRaise)));
+      return { action: 'raise', amount: raise.toString() };
+    }
+    if (validActions.canBet && rand < 0.6) {
+      const bet = validActions.minBet + BigInt(Math.floor(Math.random() * Number(validActions.maxBet - validActions.minBet)));
+      return { action: 'bet', amount: bet.toString() };
+    }
+    if (validActions.canCall) return { action: 'call' };
+    if (validActions.canCheck) return { action: 'check' };
+    return { action: 'fold' };
+  }
+
+  if (agent.style === 'tight') {
+    // Tight: folds often, only plays strong
+    if (rand < 0.4) return { action: 'fold' };
+    if (validActions.canCheck) return { action: 'check' };
+    if (validActions.canCall && rand < 0.3) return { action: 'call' };
+    if (validActions.canRaise && rand < 0.1) {
+      return { action: 'raise', amount: validActions.minRaise.toString() };
+    }
+    return { action: 'fold' };
+  }
+
+  if (agent.style === 'loose') {
+    // Loose: calls and bets often
+    if (validActions.canCall) return { action: 'call' };
+    if (validActions.canBet && rand < 0.7) {
+      return { action: 'bet', amount: validActions.minBet.toString() };
+    }
+    if (validActions.canCheck) return { action: 'check' };
+    if (validActions.canRaise && rand < 0.3) {
+      return { action: 'raise', amount: validActions.minRaise.toString() };
+    }
+    return { action: 'fold' };
+  }
+
+  // Passive: checks and calls, rarely bets
+  if (validActions.canCheck) return { action: 'check' };
+  if (validActions.canCall && rand < 0.6) return { action: 'call' };
+  if (validActions.canBet && rand < 0.2) {
+    return { action: 'bet', amount: validActions.minBet.toString() };
+  }
+  return { action: 'fold' };
+}
+
+async function runDemoHand(agents: DemoAgent[], log: string[]): Promise<void> {
+  // Wait for hand to actually start (table has 3-second delay before auto-starting)
+  // We need to wait for an active phase: preflop, flop, turn, river, showdown
+  const activePhasesSet = new Set(['preflop', 'flop', 'turn', 'river', 'showdown']);
+  const maxWait = 50; // 5 seconds max
+  let waitCount = 0;
+  while (!activePhasesSet.has(table.getState().phase) && waitCount < maxWait) {
+    await new Promise(r => setTimeout(r, 100));
+    waitCount++;
+  }
+
+  const currentPhase = table.getState().phase;
+  if (!activePhasesSet.has(currentPhase)) {
+    log.push(`Timeout waiting for hand to start (phase: ${currentPhase})`);
+    return;
+  }
+
+  log.push(`Hand started - phase: ${currentPhase}`);
+
+  // Play until hand is complete
+  const maxActions = 100; // Prevent infinite loops
+  let actionCount = 0;
+
+  while (table.getState().phase !== 'waiting' && table.getState().phase !== 'complete' && actionCount < maxActions) {
+    const state = table.getState();
+    const activePos = state.activePosition;
+
+    if (activePos === null) {
+      // No active player, wait for next phase
+      await new Promise(r => setTimeout(r, 200));
+      continue;
+    }
+
+    const player = table.getPlayerBySeat(activePos);
+    if (!player) {
+      await new Promise(r => setTimeout(r, 200));
+      continue;
+    }
+
+    const agent = agents.find(a => a.address === player.address);
+    if (!agent) {
+      await new Promise(r => setTimeout(r, 200));
+      continue;
+    }
+
+    const validActions = table.getValidActionsFor(player.address);
+    if (!validActions) {
+      await new Promise(r => setTimeout(r, 200));
+      continue;
+    }
+
+    // Maybe chat
+    if (Math.random() < 0.2) {
+      const lines = DEMO_CHAT_LINES[agent.style];
+      const line = lines[Math.floor(Math.random() * lines.length)] ?? "...";
+      table.chat(player.address, line);
+      log.push(`${agent.name}: "${line}"`);
+    }
+
+    // Make decision
+    const decision = makeAgentDecision(agent, validActions);
+    const actionResult = table.act(player.address, {
+      type: decision.action as 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'all_in',
+      amount: decision.amount ? BigInt(decision.amount) : 0n,
+    });
+
+    if (actionResult.success) {
+      log.push(`${agent.name} ${decision.action}${decision.amount ? ' ' + decision.amount : ''}`);
+    } else {
+      log.push(`${agent.name} action failed: ${actionResult.error}`);
+    }
+
+    actionCount++;
+    await new Promise(r => setTimeout(r, 100));
+  }
+}
+
+/**
+ * POST /api/operator/demo - Run a demo poker game with AI agents
+ *
+ * Optional body:
+ * - numAgents: number of agents to seat (2-6, default 4)
+ * - hands: number of hands to play (1-10, default 3)
+ * - buyIn: buy-in amount per agent (default 1000000)
+ */
+app.post('/api/operator/demo', async (req: Request, res: Response) => {
+  const { numAgents = 4, hands = 3, buyIn = '1000000' } = req.body;
+
+  const agentCount = Math.max(2, Math.min(6, Number(numAgents)));
+  const handCount = Math.max(1, Math.min(10, Number(hands)));
+  const buyInAmount = BigInt(buyIn);
+
+  const selectedAgents = DEMO_AGENTS.slice(0, agentCount);
+  const log: string[] = [];
+
+  log.push(`Starting demo with ${agentCount} agents, ${handCount} hands`);
+
+  // Wait for any active hand to complete before clearing table
+  const activePhasesSet = new Set(['preflop', 'flop', 'turn', 'river', 'showdown']);
+  let clearWait = 0;
+  while (activePhasesSet.has(table.getState().phase) && clearWait < 100) {
+    await new Promise(r => setTimeout(r, 100));
+    clearWait++;
+  }
+
+  // Stand ALL existing players from ALL seats
+  const state = table.getState();
+  for (let i = 0; i < state.seats.length; i++) {
+    const seat = state.seats[i];
+    if (seat) {
+      const standResult = table.stand(seat.address);
+      if (standResult.success) {
+        log.push(`Cleared seat ${i} (${shortAddr(seat.address)})`);
+      }
+    }
+  }
+
+  // Deposit chips for each agent
+  for (const agent of selectedAgents) {
+    ledger.confirmDeposit(agent.address, buyInAmount, `demo_${Date.now()}_${agent.name}`);
+    log.push(`${agent.name} deposited ${buyInAmount}`);
+  }
+
+  // Seat agents
+  for (let i = 0; i < selectedAgents.length; i++) {
+    const agent = selectedAgents[i]!;
+    const result = table.sit(agent.address, i, buyInAmount);
+    if (result.success) {
+      log.push(`${agent.name} sat at seat ${i}`);
+    } else {
+      log.push(`${agent.name} failed to sit: ${result.error}`);
+    }
+  }
+
+  // Play hands
+  for (let h = 0; h < handCount; h++) {
+    log.push(`\n--- Starting Hand ${h + 1} ---`);
+
+    // Check if we have enough players
+    const seatedPlayers = table.getState().seats.filter(s => s !== null);
+    if (seatedPlayers.length < 2) {
+      log.push('Not enough players to continue');
+      break;
+    }
+
+    // Run the hand
+    await runDemoHand(selectedAgents, log);
+
+    // Wait between hands
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  // Get final state
+  const finalState = table.getState();
+  const results = selectedAgents.map(agent => {
+    const player = table.getPlayerByAddress(agent.address);
+    return {
+      name: agent.name,
+      address: agent.address,
+      style: agent.style,
+      stack: player?.stack.toString() ?? '0',
+      atTable: player !== null,
+    };
+  });
+
+  res.json({
+    success: true,
+    agentsPlayed: agentCount,
+    handsPlayed: handCount,
+    results,
+    log,
+    finalPhase: finalState.phase,
+    handNumber: finalState.handNumber,
+  });
+});
+
+// ===========================
 // WebSocket handling
 // ===========================
 
