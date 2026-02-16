@@ -891,7 +891,7 @@ async function runDemoHand(agents: DemoAgent[], log: string[], actionDelayMs: nu
  * - numAgents: number of agents to seat (2-6, default 4)
  * - hands: number of hands to play (1-10, default 3)
  * - buyIn: buy-in amount per agent (default 1000000)
- * - speed: 'fast' (100ms), 'normal' (800ms), 'slow' (1500ms) - default 'normal'
+ * - speed: 'fast' (100ms), 'normal' (800ms), 'slow' (2000ms), 'very-slow' (3500ms) - default 'normal'
  */
 app.post('/api/operator/demo', async (req: Request, res: Response) => {
   const { numAgents = 4, hands = 3, buyIn = '1000000', speed = 'normal' } = req.body;
@@ -904,7 +904,8 @@ app.post('/api/operator/demo', async (req: Request, res: Response) => {
   const speedDelays: Record<string, number> = {
     fast: 100,
     normal: 800,
-    slow: 1500,
+    slow: 2000,
+    'very-slow': 3500,
   };
   const actionDelayMs = speedDelays[speed] || 800;
 

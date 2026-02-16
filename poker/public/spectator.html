@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Texas Molt'em - Live Spectator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
@@ -12,8 +13,8 @@
     }
 
     body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      background: #1a1a2e;
+      font-family: 'Roboto', system-ui, sans-serif;
+      background: #0a0a12;
       color: #fff;
       min-height: 100vh;
       overflow: hidden;
@@ -29,23 +30,25 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 20px;
-      background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+      padding: 15px;
+      background: linear-gradient(180deg, #0a0a12 0%, #12121f 100%);
     }
 
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 15px;
-      border-bottom: 1px solid #333;
-      margin-bottom: 15px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #2a2a3a;
+      margin-bottom: 10px;
     }
 
     .header h1 {
-      font-size: 1.5rem;
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.6rem;
       color: #ffd700;
-      text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+      text-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+      letter-spacing: 2px;
     }
 
     .header h1 a {
@@ -54,29 +57,35 @@
     }
 
     .back-link {
-      color: #888;
+      color: #666;
       text-decoration: none;
       font-size: 0.85rem;
-      margin-right: 15px;
     }
 
     .back-link:hover {
       color: #ffd700;
     }
 
-    .header .hand-info {
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .hand-info {
       font-size: 0.9rem;
       color: #888;
     }
 
     .phase-badge {
-      background: #e94560;
+      background: linear-gradient(135deg, #e94560 0%, #c73e54 100%);
       color: white;
-      padding: 5px 15px;
+      padding: 6px 18px;
       border-radius: 20px;
       font-size: 0.85rem;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     .table-container {
@@ -88,27 +97,27 @@
     }
 
     .poker-table {
-      width: 750px;
-      height: 420px;
+      width: 800px;
+      height: 450px;
       background: linear-gradient(145deg, #1b5e20 0%, #2e7d32 50%, #1b5e20 100%);
-      border-radius: 200px;
-      border: 15px solid #5d4037;
+      border-radius: 220px;
+      border: 18px solid #5d4037;
       box-shadow:
-        inset 0 0 50px rgba(0,0,0,0.5),
-        0 10px 30px rgba(0,0,0,0.5),
-        0 0 0 5px #3e2723;
+        inset 0 0 60px rgba(0,0,0,0.6),
+        0 15px 40px rgba(0,0,0,0.6),
+        0 0 0 6px #3e2723;
       position: relative;
     }
 
     .poker-table::before {
       content: '';
       position: absolute;
-      top: 15px;
-      left: 15px;
-      right: 15px;
-      bottom: 15px;
-      border: 2px solid rgba(255,255,255,0.1);
-      border-radius: 180px;
+      top: 18px;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      border: 3px solid rgba(255,255,255,0.08);
+      border-radius: 200px;
     }
 
     /* Community Cards */
@@ -116,81 +125,186 @@
       position: absolute;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -80%);
+      transform: translate(-50%, -100%);
       display: flex;
-      gap: 8px;
+      gap: 10px;
     }
 
-    /* Pot Display */
-    .pot-display {
+    /* Pot Display with chip stack */
+    .pot-area {
       position: absolute;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, 10px);
-      background: rgba(0,0,0,0.7);
-      padding: 8px 20px;
-      border-radius: 20px;
-      font-weight: bold;
-      color: #ffd700;
-      font-size: 1.1rem;
+      transform: translate(-50%, 20px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
     }
 
-    /* Player Positions - 6 max table */
+    .chip-stack {
+      display: flex;
+      gap: 3px;
+      align-items: flex-end;
+    }
+
+    .chip {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 3px dashed rgba(255,255,255,0.4);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+
+    .chip.red { background: linear-gradient(145deg, #e53935 0%, #b71c1c 100%); }
+    .chip.blue { background: linear-gradient(145deg, #1e88e5 0%, #0d47a1 100%); }
+    .chip.green { background: linear-gradient(145deg, #43a047 0%, #1b5e20 100%); }
+    .chip.black { background: linear-gradient(145deg, #424242 0%, #212121 100%); }
+    .chip.gold { background: linear-gradient(145deg, #ffd700 0%, #ff8c00 100%); }
+
+    .pot-display {
+      background: rgba(0,0,0,0.85);
+      padding: 10px 30px;
+      border-radius: 25px;
+      font-weight: bold;
+      color: #ffd700;
+      font-size: 1.3rem;
+      font-family: 'Oswald', sans-serif;
+      letter-spacing: 1px;
+      border: 2px solid rgba(255, 215, 0, 0.3);
+    }
+
+    /* Action Announcement Overlay */
+    .action-announcement {
+      position: absolute;
+      top: 15%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.95);
+      padding: 15px 40px;
+      border-radius: 10px;
+      text-align: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      border: 2px solid;
+    }
+
+    .action-announcement.show {
+      opacity: 1;
+      animation: announceIn 0.4s ease;
+    }
+
+    @keyframes announceIn {
+      0% { transform: translateX(-50%) scale(0.8); opacity: 0; }
+      100% { transform: translateX(-50%) scale(1); opacity: 1; }
+    }
+
+    .action-announcement .player-name {
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.1rem;
+      color: #4fc3f7;
+      margin-bottom: 5px;
+    }
+
+    .action-announcement .action-text {
+      font-family: 'Oswald', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+
+    .action-announcement.fold { border-color: #666; }
+    .action-announcement.fold .action-text { color: #888; }
+
+    .action-announcement.check { border-color: #4caf50; }
+    .action-announcement.check .action-text { color: #4caf50; }
+
+    .action-announcement.call { border-color: #2196f3; }
+    .action-announcement.call .action-text { color: #2196f3; }
+
+    .action-announcement.bet, .action-announcement.raise { border-color: #ff9800; }
+    .action-announcement.bet .action-text, .action-announcement.raise .action-text { color: #ff9800; }
+
+    .action-announcement.all-in { border-color: #e53935; }
+    .action-announcement.all-in .action-text { color: #e53935; text-shadow: 0 0 20px rgba(229, 57, 53, 0.5); }
+
+    /* Player Positions */
     .player-seat {
       position: absolute;
-      width: 140px;
+      width: 160px;
       display: flex;
       flex-direction: column;
       align-items: center;
       transition: all 0.3s ease;
     }
 
+    /* Turn indicator - very prominent */
+    .player-seat.active {
+      z-index: 50;
+    }
+
     .player-seat.active .player-info {
-      box-shadow: 0 0 20px #ffd700, 0 0 40px rgba(255, 215, 0, 0.5);
+      box-shadow:
+        0 0 30px #ffd700,
+        0 0 60px rgba(255, 215, 0, 0.6),
+        0 0 90px rgba(255, 215, 0, 0.3);
       border-color: #ffd700;
+      transform: scale(1.05);
     }
 
-    .player-seat.active::after {
-      content: '⏱️ YOUR TURN';
+    .player-seat.active .turn-timer {
+      display: block;
+    }
+
+    .turn-timer {
+      display: none;
       position: absolute;
-      bottom: -25px;
-      font-size: 0.7rem;
-      color: #ffd700;
-      font-weight: bold;
-      animation: blink 0.8s infinite;
+      bottom: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+      color: #000;
+      padding: 5px 15px;
+      border-radius: 15px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      animation: pulse 1s infinite;
+      white-space: nowrap;
     }
 
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+      50% { opacity: 0.8; transform: translateX(-50%) scale(1.05); }
     }
 
     .player-seat.folded {
-      opacity: 0.4;
+      opacity: 0.35;
     }
 
     .player-seat.folded .player-info {
-      filter: grayscale(50%);
+      filter: grayscale(70%);
     }
 
     .player-seat.winner .player-info {
-      box-shadow: 0 0 30px #4caf50, 0 0 60px rgba(76, 175, 80, 0.5);
+      box-shadow: 0 0 40px #4caf50, 0 0 80px rgba(76, 175, 80, 0.5);
       border-color: #4caf50;
     }
 
-    /* Seat positions - adjusted for better layout */
-    .seat-0 { bottom: -70px; left: 50%; transform: translateX(-50%); }
-    .seat-1 { bottom: 50px; left: -20px; }
-    .seat-2 { top: 50px; left: -20px; }
-    .seat-3 { top: -70px; left: 50%; transform: translateX(-50%); }
-    .seat-4 { top: 50px; right: -20px; }
-    .seat-5 { bottom: 50px; right: -20px; }
+    /* Seat positions */
+    .seat-0 { bottom: -80px; left: 50%; transform: translateX(-50%); }
+    .seat-1 { bottom: 60px; left: -30px; }
+    .seat-2 { top: 60px; left: -30px; }
+    .seat-3 { top: -80px; left: 50%; transform: translateX(-50%); }
+    .seat-4 { top: 60px; right: -30px; }
+    .seat-5 { bottom: 60px; right: -30px; }
 
     .player-info {
       background: linear-gradient(180deg, #2d2d44 0%, #1a1a2e 100%);
-      border: 2px solid #444;
-      border-radius: 10px;
-      padding: 8px 10px;
+      border: 3px solid #444;
+      border-radius: 12px;
+      padding: 10px 12px;
       width: 100%;
       text-align: center;
       transition: all 0.3s ease;
@@ -198,9 +312,9 @@
     }
 
     .player-name {
-      font-weight: 600;
-      font-size: 0.85rem;
-      margin-bottom: 3px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
       color: #fff;
       white-space: nowrap;
       overflow: hidden;
@@ -210,133 +324,182 @@
     .player-stack {
       color: #4caf50;
       font-weight: bold;
-      font-size: 0.9rem;
+      font-size: 1rem;
+      font-family: 'Oswald', sans-serif;
     }
 
-    /* Player bet chip */
+    /* Win probability bar */
+    .win-probability {
+      margin-top: 6px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 4px;
+      height: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .win-probability .bar {
+      height: 100%;
+      background: linear-gradient(90deg, #e53935 0%, #ff9800 50%, #4caf50 100%);
+      transition: width 0.5s ease;
+      border-radius: 4px;
+    }
+
+    .win-probability .pct {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
+
+    /* Player bet chip display */
     .player-bet {
       position: absolute;
-      background: linear-gradient(145deg, #ffd700 0%, #ff9800 100%);
-      color: #000;
-      padding: 4px 10px;
-      border-radius: 15px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      white-space: nowrap;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
       z-index: 10;
     }
 
-    /* Bet positions - chips go toward center */
-    .seat-0 .player-bet { top: -35px; left: 50%; transform: translateX(-50%); }
-    .seat-1 .player-bet { top: 20%; right: -50px; }
-    .seat-2 .player-bet { bottom: 20%; right: -50px; }
-    .seat-3 .player-bet { bottom: -35px; left: 50%; transform: translateX(-50%); }
-    .seat-4 .player-bet { bottom: 20%; left: -50px; }
-    .seat-5 .player-bet { top: 20%; left: -50px; }
+    .player-bet .bet-chips {
+      display: flex;
+      gap: 2px;
+    }
+
+    .player-bet .bet-chip {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px dashed rgba(255,255,255,0.3);
+    }
+
+    .player-bet .bet-amount {
+      background: rgba(0,0,0,0.85);
+      color: #ffd700;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      font-family: 'Oswald', sans-serif;
+    }
+
+    /* Bet positions */
+    .seat-0 .player-bet { top: -40px; left: 50%; transform: translateX(-50%); }
+    .seat-1 .player-bet { top: 30%; right: -70px; }
+    .seat-2 .player-bet { bottom: 30%; right: -70px; }
+    .seat-3 .player-bet { bottom: -40px; left: 50%; transform: translateX(-50%); }
+    .seat-4 .player-bet { bottom: 30%; left: -70px; }
+    .seat-5 .player-bet { top: 30%; left: -70px; }
 
     .player-cards {
       display: flex;
-      gap: 3px;
-      margin-top: 6px;
+      gap: 4px;
+      margin-top: 8px;
       justify-content: center;
     }
 
     /* Dealer Button */
     .dealer-button {
       position: absolute;
-      width: 28px;
-      height: 28px;
-      background: linear-gradient(145deg, #fff 0%, #ddd 100%);
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(145deg, #fff 0%, #e0e0e0 100%);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: bold;
-      font-size: 0.65rem;
+      font-size: 0.75rem;
       color: #333;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
       z-index: 20;
-      border: 2px solid #333;
+      border: 3px solid #333;
     }
 
     /* Blind indicators */
     .blind-indicator {
       position: absolute;
-      font-size: 0.6rem;
-      padding: 2px 6px;
-      border-radius: 8px;
+      top: -22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.65rem;
+      padding: 3px 8px;
+      border-radius: 10px;
       font-weight: bold;
       z-index: 15;
     }
 
-    .blind-sb {
-      background: #2196f3;
-      color: white;
-    }
+    .blind-sb { background: #2196f3; color: white; }
+    .blind-bb { background: #ff9800; color: white; }
 
-    .blind-bb {
-      background: #ff9800;
-      color: white;
-    }
-
-    /* Speech bubble for chat */
+    /* Speech bubble */
     .speech-bubble {
       position: absolute;
-      background: rgba(233, 69, 96, 0.95);
+      background: linear-gradient(135deg, #e94560 0%, #c73e54 100%);
       color: white;
-      padding: 8px 12px;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      max-width: 150px;
+      padding: 10px 15px;
+      border-radius: 15px;
+      font-size: 0.85rem;
+      max-width: 180px;
       word-wrap: break-word;
-      z-index: 100;
-      animation: fadeInOut 4s ease forwards;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+      z-index: 150;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+      animation: bubbleIn 0.3s ease, bubbleOut 0.5s ease 3.5s forwards;
+      top: -80px;
+      left: 50%;
+      transform: translateX(-50%);
     }
 
     .speech-bubble::after {
       content: '';
       position: absolute;
-      bottom: -8px;
-      left: 20px;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
       width: 0;
       height: 0;
-      border-left: 8px solid transparent;
-      border-right: 8px solid transparent;
-      border-top: 8px solid rgba(233, 69, 96, 0.95);
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-top: 10px solid #c73e54;
     }
 
-    @keyframes fadeInOut {
-      0% { opacity: 0; transform: translateY(10px); }
-      10% { opacity: 1; transform: translateY(0); }
-      80% { opacity: 1; }
-      100% { opacity: 0; }
+    @keyframes bubbleIn {
+      0% { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.8); }
+      100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    }
+
+    @keyframes bubbleOut {
+      0% { opacity: 1; }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
     }
 
     /* Card Styles */
     .card {
-      width: 40px;
-      height: 56px;
+      width: 44px;
+      height: 62px;
       background: white;
-      border-radius: 4px;
+      border-radius: 5px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       font-weight: bold;
-      font-size: 0.95rem;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      font-size: 1rem;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
       position: relative;
       transition: transform 0.3s ease;
     }
 
     .card.dealing {
-      animation: dealCard 0.4s ease;
+      animation: dealCard 0.5s ease;
     }
 
     @keyframes dealCard {
-      from { transform: translateY(-100px) rotate(180deg); opacity: 0; }
+      from { transform: translateY(-150px) rotate(180deg); opacity: 0; }
       to { transform: translateY(0) rotate(0); opacity: 1; }
     }
 
@@ -351,163 +514,138 @@
     .card.hidden::after {
       content: '';
       position: absolute;
-      top: 4px;
-      left: 4px;
-      right: 4px;
-      bottom: 4px;
+      top: 5px;
+      left: 5px;
+      right: 5px;
+      bottom: 5px;
       background: repeating-linear-gradient(
         45deg,
         #1565c0,
-        #1565c0 4px,
-        #0d47a1 4px,
-        #0d47a1 8px
+        #1565c0 5px,
+        #0d47a1 5px,
+        #0d47a1 10px
       );
-      border-radius: 2px;
+      border-radius: 3px;
     }
 
-    .card .rank {
-      font-size: 0.85rem;
-      line-height: 1;
-    }
-
-    .card .suit {
-      font-size: 1rem;
-      line-height: 1;
-    }
+    .card .rank { font-size: 0.95rem; line-height: 1; }
+    .card .suit { font-size: 1.1rem; line-height: 1; }
 
     .community-cards .card {
-      width: 50px;
-      height: 70px;
+      width: 56px;
+      height: 78px;
     }
 
-    .community-cards .card .rank {
-      font-size: 1rem;
-    }
-
-    .community-cards .card .suit {
-      font-size: 1.3rem;
-    }
+    .community-cards .card .rank { font-size: 1.2rem; }
+    .community-cards .card .suit { font-size: 1.5rem; }
 
     /* Empty seat */
     .player-seat.empty .player-info {
       background: rgba(0,0,0,0.3);
-      border: 2px dashed #444;
+      border: 2px dashed #333;
     }
 
     .player-seat.empty .player-name {
-      color: #666;
+      color: #444;
     }
 
     /* Right side - Activity Log */
     .activity-area {
-      width: 320px;
-      background: #0f0f1a;
-      border-left: 1px solid #333;
+      width: 340px;
+      background: #0a0a12;
+      border-left: 1px solid #2a2a3a;
       display: flex;
       flex-direction: column;
     }
 
     .activity-header {
       padding: 15px 20px;
-      background: #1a1a2e;
-      border-bottom: 1px solid #333;
+      background: linear-gradient(180deg, #1a1a2e 0%, #12121f 100%);
+      border-bottom: 1px solid #2a2a3a;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
     .activity-header h2 {
-      font-size: 1rem;
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.1rem;
       color: #e94560;
+      letter-spacing: 1px;
     }
 
     .live-badge {
-      background: #e53935;
+      background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%);
       color: white;
-      padding: 3px 10px;
-      border-radius: 10px;
+      padding: 4px 12px;
+      border-radius: 12px;
       font-size: 0.7rem;
       font-weight: bold;
-      animation: pulse 2s infinite;
+      animation: livePulse 2s infinite;
+      letter-spacing: 1px;
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 10px rgba(229, 57, 53, 0.5); }
+      50% { opacity: 0.7; box-shadow: 0 0 20px rgba(229, 57, 53, 0.8); }
     }
 
     .activity-log {
       flex: 1;
       overflow-y: auto;
-      padding: 10px;
+      padding: 12px;
     }
 
-    .activity-log::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .activity-log::-webkit-scrollbar-track {
-      background: #1a1a2e;
-    }
-
-    .activity-log::-webkit-scrollbar-thumb {
-      background: #444;
-      border-radius: 3px;
-    }
+    .activity-log::-webkit-scrollbar { width: 6px; }
+    .activity-log::-webkit-scrollbar-track { background: #12121f; }
+    .activity-log::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
 
     .log-entry {
-      padding: 8px 12px;
-      margin-bottom: 5px;
-      border-radius: 5px;
-      font-size: 0.8rem;
+      padding: 10px 14px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      font-size: 0.85rem;
       animation: slideIn 0.3s ease;
     }
 
     @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateX(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateX(0);
-      }
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
     }
 
     .log-entry.action {
-      background: rgba(255, 255, 255, 0.05);
-      border-left: 3px solid #2196f3;
+      background: rgba(255, 255, 255, 0.03);
+      border-left: 4px solid #2196f3;
     }
 
     .log-entry.chat {
       background: rgba(233, 69, 96, 0.1);
-      border-left: 3px solid #e94560;
+      border-left: 4px solid #e94560;
     }
 
     .log-entry.system {
-      background: rgba(255, 215, 0, 0.1);
-      border-left: 3px solid #ffd700;
+      background: rgba(255, 215, 0, 0.08);
+      border-left: 4px solid #ffd700;
       font-style: italic;
     }
 
     .log-entry.win {
-      background: rgba(76, 175, 80, 0.2);
-      border-left: 3px solid #4caf50;
+      background: rgba(76, 175, 80, 0.15);
+      border-left: 4px solid #4caf50;
       font-weight: bold;
     }
 
-    .log-entry .player {
-      color: #4fc3f7;
-      font-weight: 600;
-    }
-
-    .log-entry .amount {
-      color: #ffd700;
-      font-weight: bold;
-    }
+    .log-entry .player { color: #4fc3f7; font-weight: 700; }
+    .log-entry .amount { color: #ffd700; font-weight: bold; }
+    .log-entry .action-type { font-weight: 700; }
+    .log-entry .action-type.fold { color: #888; }
+    .log-entry .action-type.check { color: #4caf50; }
+    .log-entry .action-type.call { color: #2196f3; }
+    .log-entry .action-type.bet, .log-entry .action-type.raise { color: #ff9800; }
+    .log-entry .action-type.all-in { color: #e53935; }
 
     .log-entry .timestamp {
-      color: #666;
+      color: #555;
       font-size: 0.7rem;
       margin-left: 8px;
     }
@@ -515,30 +653,54 @@
     /* Controls */
     .controls {
       padding: 15px;
+      background: linear-gradient(180deg, #12121f 0%, #0a0a12 100%);
+      border-top: 1px solid #2a2a3a;
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-size: 0.8rem;
+      color: #888;
+    }
+
+    .speed-control label {
+      flex: 1;
+    }
+
+    .speed-control select {
       background: #1a1a2e;
-      border-top: 1px solid #333;
+      border: 1px solid #333;
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 0.8rem;
     }
 
     .demo-btn {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       background: linear-gradient(145deg, #e94560 0%, #c73e54 100%);
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       color: white;
       font-weight: bold;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       cursor: pointer;
       transition: all 0.3s ease;
+      font-family: 'Oswald', sans-serif;
+      letter-spacing: 1px;
     }
 
     .demo-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
+      box-shadow: 0 8px 25px rgba(233, 69, 96, 0.4);
     }
 
     .demo-btn:disabled {
-      background: #444;
+      background: #333;
       cursor: not-allowed;
       transform: none;
       box-shadow: none;
@@ -550,17 +712,16 @@
     }
 
     .demo-btn.llm-btn:hover {
-      box-shadow: 0 5px 20px rgba(124, 58, 237, 0.4);
+      box-shadow: 0 8px 25px rgba(124, 58, 237, 0.4);
     }
 
-    /* Connection status */
     .connection-status {
       display: flex;
       align-items: center;
       gap: 8px;
       font-size: 0.75rem;
-      color: #888;
-      margin-top: 10px;
+      color: #666;
+      margin-top: 12px;
       justify-content: center;
     }
 
@@ -571,9 +732,7 @@
       background: #f44336;
     }
 
-    .status-dot.connected {
-      background: #4caf50;
-    }
+    .status-dot.connected { background: #4caf50; }
 
     /* Hand result overlay */
     .hand-result {
@@ -581,47 +740,43 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.95);
-      padding: 25px 50px;
-      border-radius: 15px;
+      background: rgba(0,0,0,0.97);
+      padding: 30px 60px;
+      border-radius: 20px;
       text-align: center;
-      z-index: 100;
-      animation: popIn 0.3s ease;
+      z-index: 300;
+      animation: popIn 0.4s ease;
       display: none;
-      border: 2px solid #ffd700;
+      border: 3px solid #ffd700;
+      box-shadow: 0 0 50px rgba(255, 215, 0, 0.3);
     }
 
-    .hand-result.show {
-      display: block;
-    }
+    .hand-result.show { display: block; }
 
     @keyframes popIn {
-      from {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.8);
-      }
-      to {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-      }
+      from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     }
 
     .hand-result .winner-name {
-      font-size: 1.5rem;
+      font-family: 'Oswald', sans-serif;
+      font-size: 2rem;
       color: #ffd700;
       font-weight: bold;
+      letter-spacing: 2px;
     }
 
     .hand-result .hand-name {
       color: #4caf50;
-      font-size: 1rem;
-      margin-top: 5px;
+      font-size: 1.2rem;
+      margin-top: 8px;
     }
 
     .hand-result .win-amount {
       color: #fff;
-      font-size: 1.2rem;
-      margin-top: 10px;
+      font-size: 1.5rem;
+      margin-top: 12px;
+      font-family: 'Oswald', sans-serif;
     }
   </style>
 </head>
@@ -631,9 +786,11 @@
     <div class="table-area">
       <div class="header">
         <a href="/" class="back-link">← ClawdVegas</a>
-        <h1><a href="/spectator.html">Texas Molt'em</a></h1>
-        <span class="hand-info">Hand #<span id="handNumber">0</span></span>
-        <span class="phase-badge" id="phase">WAITING</span>
+        <h1><a href="/spectator.html">TEXAS MOLT'EM</a></h1>
+        <div class="header-right">
+          <span class="hand-info">Hand #<span id="handNumber">0</span></span>
+          <span class="phase-badge" id="phase">WAITING</span>
+        </div>
       </div>
 
       <div class="table-container">
@@ -641,9 +798,16 @@
           <!-- Community Cards -->
           <div class="community-cards" id="communityCards"></div>
 
-          <!-- Pot -->
-          <div class="pot-display">
-            POT: $<span id="potAmount">0</span>
+          <!-- Pot Area with Chips -->
+          <div class="pot-area">
+            <div class="chip-stack" id="chipStack"></div>
+            <div class="pot-display">POT: $<span id="potAmount">0</span></div>
+          </div>
+
+          <!-- Action Announcement -->
+          <div class="action-announcement" id="actionAnnouncement">
+            <div class="player-name" id="announceName"></div>
+            <div class="action-text" id="announceAction"></div>
           </div>
 
           <!-- Dealer Button -->
@@ -670,18 +834,26 @@
     <!-- Right: Activity Log -->
     <div class="activity-area">
       <div class="activity-header">
-        <h2>Live Activity</h2>
+        <h2>LIVE ACTIVITY</h2>
         <span class="live-badge">LIVE</span>
       </div>
 
       <div class="activity-log" id="activityLog"></div>
 
       <div class="controls">
+        <div class="speed-control">
+          <label>Game Speed:</label>
+          <select id="speedSelect">
+            <option value="slow">Slow (Watchable)</option>
+            <option value="very-slow" selected>Very Slow (TV Style)</option>
+            <option value="normal">Normal</option>
+          </select>
+        </div>
         <button class="demo-btn" id="demoBtn" onclick="startDemo()">
-          Quick Demo (Random)
+          START DEMO GAME
         </button>
         <button class="demo-btn llm-btn" id="llmDemoBtn" onclick="startLLMDemo()">
-          AI Demo (Claude)
+          AI DEMO (CLAUDE)
         </button>
         <div class="connection-status">
           <span class="status-dot" id="statusDot"></span>
@@ -703,9 +875,6 @@
       seats: [null, null, null, null, null, null],
       pot: 0
     };
-
-    // Speech bubbles tracking
-    let speechBubbles = {};
 
     // Agent name mapping
     const AGENT_NAMES = {
@@ -738,6 +907,35 @@
       return suit === 'h' || suit === 'd';
     }
 
+    // Calculate simple win probability (mock - would need real equity calc)
+    function calculateWinProbability(seatIndex) {
+      const seat = gameState.seats[seatIndex];
+      if (!seat || seat.isFolded || !seat.holeCards || seat.holeCards.length === 0) {
+        return 0;
+      }
+
+      const activePlayers = gameState.seats.filter(s => s && !s.isFolded).length;
+      if (activePlayers === 0) return 0;
+
+      // Simple heuristic based on cards (not real equity)
+      let strength = 50 / activePlayers; // Base equity
+      const cards = seat.holeCards;
+
+      if (cards.length >= 2) {
+        const rank1 = '23456789TJQKA'.indexOf(cards[0].rank);
+        const rank2 = '23456789TJQKA'.indexOf(cards[1].rank);
+        const suited = cards[0].suit === cards[1].suit;
+        const paired = rank1 === rank2;
+
+        strength += (rank1 + rank2) * 1.5; // High cards bonus
+        if (paired) strength += 15 + rank1 * 2; // Pairs
+        if (suited) strength += 5; // Suited bonus
+        if (Math.abs(rank1 - rank2) === 1) strength += 4; // Connectors
+      }
+
+      return Math.min(95, Math.max(5, Math.round(strength)));
+    }
+
     // Render card
     function renderCard(card, hidden = false, animate = false) {
       if (!card || hidden) {
@@ -751,6 +949,36 @@
           <span class="suit">${getSuitSymbol(card.suit)}</span>
         </div>
       `;
+    }
+
+    // Render chip stack based on pot size
+    function renderChipStack() {
+      const pot = calculatePot();
+      const potNum = Number(pot);
+      const stack = document.getElementById('chipStack');
+
+      if (potNum === 0) {
+        stack.innerHTML = '';
+        return;
+      }
+
+      let chips = [];
+      let remaining = potNum;
+
+      // Determine chips to show (simplified)
+      if (remaining >= 10000) { chips.push('gold'); remaining -= 10000; }
+      if (remaining >= 5000) { chips.push('black'); remaining -= 5000; }
+      if (remaining >= 1000) { chips.push('green'); remaining -= 1000; }
+      if (remaining >= 500) { chips.push('blue'); remaining -= 500; }
+      if (remaining >= 100) { chips.push('red'); remaining -= 100; }
+
+      // Ensure at least one chip
+      if (chips.length === 0) chips.push('red');
+
+      // Limit to 5 chips max
+      chips = chips.slice(0, 5);
+
+      stack.innerHTML = chips.map(c => `<div class="chip ${c}"></div>`).join('');
     }
 
     // Render player seat
@@ -770,7 +998,6 @@
 
       const isActive = gameState.activePosition === seatIndex;
       const isFolded = seat.isFolded;
-      const isButton = gameState.buttonPosition === seatIndex;
       const classes = ['player-seat', `seat-${seatIndex}`];
       if (isActive) classes.push('active');
       if (isFolded) classes.push('folded');
@@ -782,18 +1009,56 @@
         ? `<div class="player-cards">${cards.map(c => renderCard(c, isFolded)).join('')}</div>`
         : '';
 
-      const currentBet = seat.currentBet ? BigInt(seat.currentBet) : 0n;
-      const betHtml = currentBet > 0n
-        ? `<div class="player-bet">$${formatAmount(currentBet.toString())}</div>`
+      // Win probability bar
+      const winPct = calculateWinProbability(seatIndex);
+      const probHtml = (cards.length > 0 && !isFolded && gameState.phase !== 'waiting')
+        ? `<div class="win-probability">
+             <div class="bar" style="width: ${winPct}%"></div>
+             <span class="pct">${winPct}%</span>
+           </div>`
         : '';
 
+      // Current bet display with chips
+      const currentBet = seat.currentBet ? BigInt(seat.currentBet) : 0n;
+      let betHtml = '';
+      if (currentBet > 0n) {
+        const betNum = Number(currentBet);
+        let chipColor = 'red';
+        if (betNum >= 10000) chipColor = 'gold';
+        else if (betNum >= 5000) chipColor = 'black';
+        else if (betNum >= 1000) chipColor = 'green';
+        else if (betNum >= 500) chipColor = 'blue';
+
+        betHtml = `
+          <div class="player-bet">
+            <div class="bet-chips">
+              <div class="bet-chip chip ${chipColor}"></div>
+            </div>
+            <span class="bet-amount">$${formatAmount(currentBet.toString())}</span>
+          </div>
+        `;
+      }
+
+      // Blind indicator
+      const sbPos = (gameState.buttonPosition + 1) % 6;
+      const bbPos = (gameState.buttonPosition + 2) % 6;
+      let blindHtml = '';
+      if (seatIndex === sbPos && gameState.seats[sbPos]) {
+        blindHtml = '<div class="blind-indicator blind-sb">SB</div>';
+      } else if (seatIndex === bbPos && gameState.seats[bbPos]) {
+        blindHtml = '<div class="blind-indicator blind-bb">BB</div>';
+      }
+
       el.innerHTML = `
+        ${blindHtml}
         <div class="player-info">
           <div class="player-name">${getPlayerName(seat.address)}</div>
           <div class="player-stack">$${formatAmount(seat.stack)}</div>
           ${cardsHtml}
+          ${probHtml}
         </div>
         ${betHtml}
+        ${isActive ? '<div class="turn-timer">THINKING...</div>' : ''}
       `;
     }
 
@@ -815,14 +1080,13 @@
 
       btn.style.display = 'flex';
 
-      // Position near the button seat
       const positions = [
-        { bottom: '40px', left: 'calc(50% + 60px)' },   // seat 0
-        { bottom: '120px', left: '120px' },              // seat 1
-        { top: '120px', left: '120px' },                 // seat 2
-        { top: '40px', left: 'calc(50% + 60px)' },      // seat 3
-        { top: '120px', right: '120px', left: 'auto' }, // seat 4
-        { bottom: '120px', right: '120px', left: 'auto' }, // seat 5
+        { bottom: '45px', left: 'calc(50% + 70px)' },
+        { bottom: '130px', left: '130px' },
+        { top: '130px', left: '130px' },
+        { top: '45px', left: 'calc(50% + 70px)' },
+        { top: '130px', right: '130px', left: 'auto' },
+        { bottom: '130px', right: '130px', left: 'auto' },
       ];
 
       const pos = positions[gameState.buttonPosition] || positions[0];
@@ -830,7 +1094,7 @@
       Object.assign(btn.style, pos);
     }
 
-    // Calculate pot from current bets and main pot
+    // Calculate pot
     function calculatePot() {
       let pot = BigInt(gameState.pot || 0);
       for (const seat of gameState.seats) {
@@ -841,13 +1105,33 @@
       return pot;
     }
 
+    // Show action announcement
+    function showActionAnnouncement(playerName, action, amount) {
+      const el = document.getElementById('actionAnnouncement');
+      const nameEl = document.getElementById('announceName');
+      const actionEl = document.getElementById('announceAction');
+
+      nameEl.textContent = playerName;
+
+      let actionText = action.toUpperCase();
+      let actionClass = action.toLowerCase().replace('_', '-');
+
+      if (amount && amount !== '0' && action !== 'fold' && action !== 'check') {
+        actionText += ' $' + formatAmount(amount);
+      }
+
+      actionEl.textContent = actionText;
+      el.className = 'action-announcement show ' + actionClass;
+
+      setTimeout(() => {
+        el.classList.remove('show');
+      }, 2000);
+    }
+
     // Show speech bubble
     function showSpeechBubble(seatIndex, message) {
-      // Remove existing bubble for this seat
       const existingBubble = document.querySelector(`.speech-bubble[data-seat="${seatIndex}"]`);
-      if (existingBubble) {
-        existingBubble.remove();
-      }
+      if (existingBubble) existingBubble.remove();
 
       const seatEl = document.getElementById(`seat-${seatIndex}`);
       if (!seatEl) return;
@@ -856,11 +1140,8 @@
       bubble.className = 'speech-bubble';
       bubble.setAttribute('data-seat', seatIndex);
       bubble.textContent = message;
-      bubble.style.top = '-60px';
-      bubble.style.left = '10px';
       seatEl.appendChild(bubble);
 
-      // Remove after animation
       setTimeout(() => bubble.remove(), 4000);
     }
 
@@ -876,6 +1157,7 @@
 
       renderCommunityCards();
       renderDealerButton();
+      renderChipStack();
     }
 
     // Add log entry
@@ -896,17 +1178,17 @@
     }
 
     // Show hand result
-    function showHandResult(winners, timeout = 3000) {
+    function showHandResult(winners, handName, timeout = 4000) {
       const el = document.getElementById('handResult');
       if (winners && winners.length > 0) {
         const winner = winners[0];
         const seat = gameState.seats[winner.seatIndex];
         document.getElementById('winnerName').textContent =
           seat ? getPlayerName(seat.address) + ' WINS!' : 'Winner!';
+        document.getElementById('handName').textContent = handName || '';
         document.getElementById('winAmount').textContent =
           '$' + formatAmount(winner.amount);
 
-        // Mark winner seat
         const seatEl = document.getElementById(`seat-${winner.seatIndex}`);
         if (seatEl) seatEl.classList.add('winner');
 
@@ -915,6 +1197,16 @@
           el.classList.remove('show');
           if (seatEl) seatEl.classList.remove('winner');
         }, timeout);
+      }
+    }
+
+    // Collect bets into pot
+    function collectBetsToPot() {
+      for (const seat of gameState.seats) {
+        if (seat && seat.currentBet) {
+          gameState.pot = (BigInt(gameState.pot || 0) + BigInt(seat.currentBet)).toString();
+          seat.currentBet = '0';
+        }
       }
     }
 
@@ -928,13 +1220,13 @@
       ws.onopen = () => {
         document.getElementById('statusDot').classList.add('connected');
         document.getElementById('connectionText').textContent = 'Connected';
-        addLogEntry('system', 'Connected to server');
+        addLogEntry('system', 'Connected to ClawdVegas');
       };
 
       ws.onclose = () => {
         document.getElementById('statusDot').classList.remove('connected');
         document.getElementById('connectionText').textContent = 'Disconnected';
-        addLogEntry('system', 'Disconnected from server');
+        addLogEntry('system', 'Connection lost - reconnecting...');
         setTimeout(connectWebSocket, 3000);
       };
 
@@ -947,14 +1239,14 @@
           const msg = JSON.parse(event.data);
           handleEvent(msg.event, msg.data);
         } catch (e) {
-          console.error('Failed to parse message:', e);
+          console.error('Parse error:', e);
         }
       };
     }
 
-    // Handle WebSocket events
+    // Handle events
     function handleEvent(event, data) {
-      console.log('Event:', event, data); // Debug
+      console.log('Event:', event, data);
 
       switch (event) {
         case 'connected':
@@ -973,7 +1265,6 @@
           break;
 
         case 'player_sat':
-          // ADD PLAYER TO SEATS
           gameState.seats[data.seatIndex] = {
             address: data.address,
             stack: data.stack,
@@ -987,9 +1278,8 @@
           break;
 
         case 'player_stood':
-          // REMOVE PLAYER FROM SEATS
           gameState.seats[data.seatIndex] = null;
-          addLogEntry('action', `<span class="player">${getPlayerName(data.address)}</span> leaves the table`);
+          addLogEntry('action', `Player leaves the table`);
           renderState();
           break;
 
@@ -999,7 +1289,6 @@
           gameState.phase = 'preflop';
           gameState.communityCards = [];
           gameState.pot = 0;
-          // Clear bets and cards but keep players
           for (const seat of gameState.seats) {
             if (seat) {
               seat.currentBet = '0';
@@ -1008,7 +1297,7 @@
               seat.isAllIn = false;
             }
           }
-          addLogEntry('system', `Hand #${data.handNumber} begins`);
+          addLogEntry('system', `<strong>Hand #${data.handNumber}</strong> begins`);
           renderState();
           break;
 
@@ -1020,16 +1309,13 @@
           break;
 
         case 'blinds_posted':
-          // Update blind bets
           if (data.smallBlind && gameState.seats[data.smallBlind.seat]) {
             gameState.seats[data.smallBlind.seat].currentBet = data.smallBlind.amount;
           }
           if (data.bigBlind && gameState.seats[data.bigBlind.seat]) {
             gameState.seats[data.bigBlind.seat].currentBet = data.bigBlind.amount;
           }
-          addLogEntry('action',
-            `Blinds: <span class="amount">$${formatAmount(data.smallBlind.amount)}</span> / <span class="amount">$${formatAmount(data.bigBlind.amount)}</span>`
-          );
+          addLogEntry('action', `Blinds posted: <span class="amount">$${formatAmount(data.smallBlind.amount)}</span> / <span class="amount">$${formatAmount(data.bigBlind.amount)}</span>`);
           renderState();
           break;
 
@@ -1040,16 +1326,20 @@
 
         case 'player_acted':
           const playerName = getPlayerName(data.address);
+          const actionClass = data.action.toLowerCase().replace('_', '-');
           const amount = data.amount !== '0' ? ` <span class="amount">$${formatAmount(data.amount)}</span>` : '';
-          addLogEntry('action', `<span class="player">${playerName}</span> ${data.action}${amount}`);
+
+          addLogEntry('action', `<span class="player">${playerName}</span> <span class="action-type ${actionClass}">${data.action.toUpperCase()}</span>${amount}`);
+
+          // Show big announcement
+          showActionAnnouncement(playerName, data.action, data.amount);
 
           if (gameState.seats[data.seatIndex]) {
             gameState.seats[data.seatIndex].stack = data.newStack;
             if (data.action === 'fold') {
               gameState.seats[data.seatIndex].isFolded = true;
               gameState.seats[data.seatIndex].currentBet = '0';
-            } else if (data.action === 'bet' || data.action === 'raise' || data.action === 'call') {
-              // Update current bet
+            } else if (['bet', 'raise', 'call'].includes(data.action)) {
               if (data.totalBet) {
                 gameState.seats[data.seatIndex].currentBet = data.totalBet;
               }
@@ -1065,9 +1355,8 @@
         case 'flop_dealt':
           gameState.phase = 'flop';
           gameState.communityCards = data.cards;
-          // Collect bets into pot
           collectBetsToPot();
-          addLogEntry('system', `Flop: ${data.cards.map(c => c.display).join(' ')}`);
+          addLogEntry('system', `<strong>FLOP:</strong> ${data.cards.map(c => c.display).join(' ')}`);
           renderState();
           break;
 
@@ -1075,7 +1364,7 @@
           gameState.phase = 'turn';
           gameState.communityCards.push(data.card);
           collectBetsToPot();
-          addLogEntry('system', `Turn: ${data.card.display}`);
+          addLogEntry('system', `<strong>TURN:</strong> ${data.card.display}`);
           renderState();
           break;
 
@@ -1083,7 +1372,7 @@
           gameState.phase = 'river';
           gameState.communityCards.push(data.card);
           collectBetsToPot();
-          addLogEntry('system', `River: ${data.card.display}`);
+          addLogEntry('system', `<strong>RIVER:</strong> ${data.card.display}`);
           renderState();
           break;
 
@@ -1094,7 +1383,7 @@
             if (seat) {
               seat.holeCards = hand.cards;
               const name = getPlayerName(seat.address);
-              addLogEntry('action', `<span class="player">${name}</span> shows ${hand.handName}`);
+              addLogEntry('action', `<span class="player">${name}</span> shows <strong>${hand.handName}</strong>`);
             }
           }
           renderState();
@@ -1102,14 +1391,16 @@
 
         case 'pot_awarded':
           collectBetsToPot();
+          let winHandName = '';
           for (const winner of data.winners || []) {
             const seat = gameState.seats[winner.seatIndex];
             if (seat) {
               const name = getPlayerName(seat.address);
-              addLogEntry('win', `<span class="player">${name}</span> wins <span class="amount">$${formatAmount(winner.amount)}</span>!`);
+              winHandName = winner.handName || '';
+              addLogEntry('win', `<span class="player">${name}</span> wins <span class="amount">$${formatAmount(winner.amount)}</span> with ${winHandName}!`);
             }
           }
-          showHandResult(data.winners);
+          showHandResult(data.winners, winHandName);
           break;
 
         case 'hand_complete':
@@ -1127,7 +1418,6 @@
         case 'chat':
           const chatName = getPlayerName(data.address);
           addLogEntry('chat', `<span class="player">${chatName}</span>: "${data.message}"`);
-          // Show speech bubble
           const chatSeatIndex = gameState.seats.findIndex(s => s && s.address === data.address);
           if (chatSeatIndex !== -1) {
             showSpeechBubble(chatSeatIndex, data.message);
@@ -1136,49 +1426,40 @@
       }
     }
 
-    // Collect bets into pot (when moving to next street)
-    function collectBetsToPot() {
-      for (const seat of gameState.seats) {
-        if (seat && seat.currentBet) {
-          gameState.pot = (BigInt(gameState.pot || 0) + BigInt(seat.currentBet)).toString();
-          seat.currentBet = '0';
-        }
-      }
-    }
-
-    // Start quick demo game (random agents)
+    // Start demo
     async function startDemo() {
       const btn = document.getElementById('demoBtn');
+      const speedSelect = document.getElementById('speedSelect');
       btn.disabled = true;
-      btn.textContent = 'Starting...';
+      btn.textContent = 'STARTING...';
 
       try {
         const response = await fetch('/api/operator/demo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ numAgents: 4, hands: 3, speed: 'slow' })
+          body: JSON.stringify({
+            numAgents: 4,
+            hands: 3,
+            speed: speedSelect.value
+          })
         });
 
-        if (!response.ok) {
-          throw new Error('Demo failed to start');
-        }
-
-        addLogEntry('system', 'Quick demo started (random agents)');
+        if (!response.ok) throw new Error('Demo failed');
+        addLogEntry('system', 'Demo game started');
       } catch (e) {
-        addLogEntry('system', 'Failed to start demo: ' + e.message);
+        addLogEntry('system', 'Failed: ' + e.message);
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Quick Demo (Random)';
+        btn.textContent = 'START DEMO GAME';
       }
     }
 
-    // Start LLM demo game (Claude-powered agents)
+    // Start LLM demo
     async function startLLMDemo() {
       const btn = document.getElementById('llmDemoBtn');
       btn.disabled = true;
-      btn.textContent = 'AI Thinking...';
-
-      addLogEntry('system', 'Starting AI demo - Claude agents analyzing...');
+      btn.textContent = 'AI THINKING...';
+      addLogEntry('system', 'Starting AI demo with Claude agents...');
 
       try {
         const response = await fetch('/api/operator/demo-llm', {
@@ -1187,15 +1468,11 @@
           body: JSON.stringify({ numAgents: 4, hands: 2 })
         });
 
-        if (!response.ok) {
-          throw new Error('LLM Demo failed to start');
-        }
+        if (!response.ok) throw new Error('LLM Demo failed');
 
         const result = await response.json();
-        addLogEntry('system', 'AI demo complete!');
-
+        addLogEntry('system', '--- FINAL STANDINGS ---');
         if (result.results) {
-          addLogEntry('system', '--- FINAL STANDINGS ---');
           for (const r of result.results) {
             const profit = BigInt(r.profit);
             const profitStr = profit >= 0n ? '+$' + formatAmount(profit) : '-$' + formatAmount(-profit);
@@ -1203,10 +1480,10 @@
           }
         }
       } catch (e) {
-        addLogEntry('system', 'Failed to start LLM demo: ' + e.message);
+        addLogEntry('system', 'Failed: ' + e.message);
       } finally {
         btn.disabled = false;
-        btn.textContent = 'AI Demo (Claude)';
+        btn.textContent = 'AI DEMO (CLAUDE)';
       }
     }
 
