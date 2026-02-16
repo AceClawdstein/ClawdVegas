@@ -355,13 +355,13 @@
       100% { transform: scale(1); opacity: 1; }
     }
 
-    /* Position each bubble above its corresponding seat */
-    .bubble-seat-0 { bottom: 70px; left: 22%; transform: translateX(-50%); }
-    .bubble-seat-1 { top: 50%; left: 80px; transform: translateY(-100%); }
-    .bubble-seat-2 { top: 70px; left: 25%; transform: translateX(-50%); }
-    .bubble-seat-3 { top: 70px; right: 25%; transform: translateX(50%); }
-    .bubble-seat-4 { top: 50%; right: 80px; transform: translateY(-100%); }
-    .bubble-seat-5 { bottom: 70px; right: 22%; transform: translateX(50%); }
+    /* Position each bubble CLEARLY above player avatars - outside the table */
+    .bubble-seat-0 { bottom: 180px; left: 22%; transform: translateX(-50%); }
+    .bubble-seat-1 { top: 35%; left: -30px; transform: translateY(-50%); }
+    .bubble-seat-2 { top: -40px; left: 25%; transform: translateX(-50%); }
+    .bubble-seat-3 { top: -40px; right: 25%; transform: translateX(50%); }
+    .bubble-seat-4 { top: 35%; right: -30px; transform: translateY(-50%); }
+    .bubble-seat-5 { bottom: 180px; right: 22%; transform: translateX(50%); }
 
     /* Action bubble styles */
     .player-bubble.action-fold {
@@ -483,6 +483,49 @@
       box-shadow: 0 3px 8px rgba(0,0,0,0.4);
       position: relative;
     }
+
+    /* Card dealing animation */
+    .card.dealing {
+      animation: dealCard 0.5s ease-out forwards;
+    }
+
+    @keyframes dealCard {
+      0% {
+        transform: translate(calc(50vw - 50%), calc(50vh - 50%)) scale(0.3) rotate(-180deg);
+        opacity: 0;
+      }
+      100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 1;
+      }
+    }
+
+    /* Stagger animation for second card */
+    .card.dealing:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    /* Community card dealing */
+    .community-cards .card.dealing {
+      animation: dealCommunityCard 0.4s ease-out forwards;
+    }
+
+    @keyframes dealCommunityCard {
+      0% {
+        transform: translateY(100px) scale(0.5);
+        opacity: 0;
+      }
+      100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+    }
+
+    .community-cards .card.dealing:nth-child(1) { animation-delay: 0s; }
+    .community-cards .card.dealing:nth-child(2) { animation-delay: 0.1s; }
+    .community-cards .card.dealing:nth-child(3) { animation-delay: 0.2s; }
+    .community-cards .card.dealing:nth-child(4) { animation-delay: 0.3s; }
+    .community-cards .card.dealing:nth-child(5) { animation-delay: 0.4s; }
 
     .card.red { color: #e53935; }
     .card.black { color: #212121; }
@@ -661,13 +704,13 @@
       border: 2px solid #ef5350;
     }
 
-    /* Position chip positions for each seat */
-    .seat-0 .position-chip { top: -35px; right: 10px; }
-    .seat-1 .position-chip { top: -10px; right: -20px; }
-    .seat-2 .position-chip { bottom: -35px; right: 10px; }
-    .seat-3 .position-chip { bottom: -35px; left: 10px; }
-    .seat-4 .position-chip { top: -10px; left: -20px; }
-    .seat-5 .position-chip { top: -35px; left: 10px; }
+    /* Position chip positions for each seat - next to avatar, not floating */
+    .seat-0 .position-chip { top: 0; right: -15px; }
+    .seat-1 .position-chip { top: 0; left: 80px; }
+    .seat-2 .position-chip { top: 0; right: -15px; }
+    .seat-3 .position-chip { top: 0; left: -15px; }
+    .seat-4 .position-chip { top: 0; right: 80px; }
+    .seat-5 .position-chip { top: 0; left: -15px; }
 
     /* ClawdVegas branding on felt */
     .table-branding {
@@ -818,13 +861,14 @@
       return rank === 'T' ? '10' : rank;
     }
 
-    function renderCard(card, hidden = false) {
+    function renderCard(card, hidden = false, animate = false) {
       if (!card || hidden) {
         return '<div class="card hidden"></div>';
       }
       const colorClass = isRedSuit(card.suit) ? 'red' : 'black';
+      const animClass = animate ? ' dealing' : '';
       return `
-        <div class="card ${colorClass}">
+        <div class="card ${colorClass}${animClass}">
           <span class="rank">${displayRank(card.rank)}</span>
           <span class="suit">${getSuitSymbol(card.suit)}</span>
         </div>
@@ -972,9 +1016,98 @@
       `;
     }
 
-    function renderCommunityCards() {
+    function renderCommunityCards(animate = false) {
       const el = document.getElementById('communityCards');
-      el.innerHTML = gameState.communityCards.map(c => renderCard(c)).join('');
+      el.innerHTML = gameState.communityCards.map(c => renderCard(c, false, animate)).join('');
+    }
+
+    // Render a seat with card animation
+    function renderSeatWithAnimation(seatIndex, animateCards = false) {
+      const seat = gameState.seats[seatIndex];
+      const el = document.getElementById(`seat-${seatIndex}`);
+
+      if (!seat) {
+        renderSeat(seatIndex);
+        return;
+      }
+
+      const isActive = gameState.activePosition === seatIndex;
+      const isFolded = seat.isFolded;
+      const classes = ['player-seat', `seat-${seatIndex}`];
+      if (isActive) classes.push('active');
+      if (isFolded) classes.push('folded');
+      el.className = classes.join(' ');
+
+      const initialStack = gameState.initialStacks[seat.address] || seat.stack;
+      const currentStack = BigInt(seat.stack);
+      const profit = currentStack - BigInt(initialStack);
+      const profitClass = profit >= 0n ? 'positive' : 'negative';
+      const profitStr = profit >= 0n ? '+$' + formatAmount(profit.toString()) : '-$' + formatAmount((-profit).toString());
+
+      const winPct = calculateWinProbability(seatIndex);
+      const showProb = seat.holeCards && seat.holeCards.length > 0 && !isFolded && gameState.phase !== 'waiting';
+
+      // Cards with animation
+      const cards = seat.holeCards || [];
+      const cardsHtml = cards.length > 0
+        ? `<div class="player-cards-on-table">${cards.map(c => renderCard(c, false, animateCards)).join('')}</div>`
+        : '';
+
+      const currentBet = seat.currentBet ? BigInt(seat.currentBet) : 0n;
+      let betHtml = '';
+      if (currentBet > 0n) {
+        const betNum = Number(currentBet);
+        let chipColor = 'red';
+        if (betNum >= 10000) chipColor = 'gold';
+        else if (betNum >= 5000) chipColor = 'black';
+        else if (betNum >= 1000) chipColor = 'green';
+        else if (betNum >= 500) chipColor = 'blue';
+
+        betHtml = `
+          <div class="player-bet-on-table">
+            <div class="bet-chip-small chip ${chipColor}"></div>
+            <span class="bet-amount-label">$${formatAmount(currentBet.toString())}</span>
+          </div>
+        `;
+      }
+
+      let positionChipHtml = '';
+      const activeSeatIndexes = gameState.seats.map((s, i) => s ? i : -1).filter(i => i >= 0);
+      const numActive = activeSeatIndexes.length;
+
+      if (numActive >= 2) {
+        const buttonIdx = gameState.buttonPosition;
+        const buttonActivePos = activeSeatIndexes.indexOf(buttonIdx);
+        if (buttonActivePos !== -1) {
+          const sbActivePos = (buttonActivePos + 1) % numActive;
+          const bbActivePos = (buttonActivePos + 2) % numActive;
+          const sbSeat = activeSeatIndexes[sbActivePos];
+          const bbSeat = activeSeatIndexes[bbActivePos];
+
+          if (seatIndex === buttonIdx) {
+            positionChipHtml = '<div class="position-chip dealer">D</div>';
+          } else if (seatIndex === sbSeat) {
+            positionChipHtml = '<div class="position-chip sb">SB</div>';
+          } else if (seatIndex === bbSeat) {
+            positionChipHtml = '<div class="position-chip bb">BB</div>';
+          }
+        }
+      }
+
+      el.innerHTML = `
+        ${positionChipHtml}
+        <div class="lobster-character">
+          <div class="lobster-avatar color-${seatIndex}">🦞</div>
+          <div class="player-name-tag">${getPlayerName(seat.address)}</div>
+          <div class="player-stack-display">$${formatAmount(seat.stack)}</div>
+          <div class="player-profit ${profitClass}">${profitStr}</div>
+          ${showProb ? `
+            <div class="win-prob-text">${winPct}% to win</div>
+          ` : ''}
+        </div>
+        ${cardsHtml}
+        ${betHtml}
+      `;
     }
 
     function calculatePot() {
@@ -1151,7 +1284,8 @@
         case 'hole_cards_dealt':
           if (gameState.seats[data.seatIndex]) {
             gameState.seats[data.seatIndex].holeCards = data.cards;
-            renderSeat(data.seatIndex);
+            // Animate the cards being dealt
+            renderSeatWithAnimation(data.seatIndex, true);
           }
           break;
 
@@ -1189,24 +1323,26 @@
             actionText += ' $' + formatAmount(data.amount);
           }
 
-          // Update game state first
-          if (gameState.seats[actingSeatIdx]) {
-            gameState.seats[actingSeatIdx].stack = data.newStack;
-            if (data.action === 'fold') {
-              gameState.seats[actingSeatIdx].isFolded = true;
-              gameState.seats[actingSeatIdx].currentBet = '0';
-            } else if (['bet', 'raise', 'call'].includes(data.action)) {
-              if (data.totalBet) gameState.seats[actingSeatIdx].currentBet = data.totalBet;
-            }
-            if (data.action === 'all_in' || data.action === 'all-in') {
-              gameState.seats[actingSeatIdx].isAllIn = true;
-            }
-          }
-          gameState.activePosition = null;
-          renderState();
+          // Show bubble IMMEDIATELY - before state update for instant feedback
+          showPlayerBubble(actingSeatIdx, actionText, bubbleType, 3500);
 
-          // Show bubble AFTER render so it doesn't get destroyed
-          showPlayerBubble(actingSeatIdx, actionText, bubbleType, 3000);
+          // Small delay then update state
+          setTimeout(() => {
+            if (gameState.seats[actingSeatIdx]) {
+              gameState.seats[actingSeatIdx].stack = data.newStack;
+              if (data.action === 'fold') {
+                gameState.seats[actingSeatIdx].isFolded = true;
+                gameState.seats[actingSeatIdx].currentBet = '0';
+              } else if (['bet', 'raise', 'call'].includes(data.action)) {
+                if (data.totalBet) gameState.seats[actingSeatIdx].currentBet = data.totalBet;
+              }
+              if (data.action === 'all_in' || data.action === 'all-in') {
+                gameState.seats[actingSeatIdx].isAllIn = true;
+              }
+            }
+            gameState.activePosition = null;
+            renderState();
+          }, 200);
           break;
 
         case 'flop_dealt':
@@ -1214,7 +1350,13 @@
           gameState.communityCards = data.cards;
           collectBetsToPot();
           aceNarrates(`The flop: ${data.cards.map(c => displayRank(c.rank) + getSuitSymbol(c.suit)).join(' ')}`, 3000);
-          renderState();
+          // Render with animation
+          document.getElementById('handNumber').textContent = gameState.handNumber;
+          document.getElementById('phase').textContent = gameState.phase.toUpperCase();
+          document.getElementById('potAmount').textContent = formatAmount(calculatePot().toString());
+          for (let i = 0; i < 6; i++) renderSeat(i);
+          renderCommunityCards(true); // Animate
+          renderChipStack();
           break;
 
         case 'turn_dealt':
@@ -1222,7 +1364,13 @@
           gameState.communityCards.push(data.card);
           collectBetsToPot();
           aceNarrates(`The turn: ${displayRank(data.card.rank)}${getSuitSymbol(data.card.suit)}`, 2500);
-          renderState();
+          // Render with animation
+          document.getElementById('handNumber').textContent = gameState.handNumber;
+          document.getElementById('phase').textContent = gameState.phase.toUpperCase();
+          document.getElementById('potAmount').textContent = formatAmount(calculatePot().toString());
+          for (let i = 0; i < 6; i++) renderSeat(i);
+          renderCommunityCards(true); // Animate
+          renderChipStack();
           break;
 
         case 'river_dealt':
@@ -1230,7 +1378,13 @@
           gameState.communityCards.push(data.card);
           collectBetsToPot();
           aceNarrates(`The river: ${displayRank(data.card.rank)}${getSuitSymbol(data.card.suit)}`, 2500);
-          renderState();
+          // Render with animation
+          document.getElementById('handNumber').textContent = gameState.handNumber;
+          document.getElementById('phase').textContent = gameState.phase.toUpperCase();
+          document.getElementById('potAmount').textContent = formatAmount(calculatePot().toString());
+          for (let i = 0; i < 6; i++) renderSeat(i);
+          renderCommunityCards(true); // Animate
+          renderChipStack();
           break;
 
         case 'showdown':
