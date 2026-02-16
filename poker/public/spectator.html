@@ -88,12 +88,12 @@
       border-radius: 230px;
     }
 
-    /* Ace Clawdstein - Dealer in center */
+    /* Ace Clawdstein - Dealer at bottom center outside table */
     .dealer-ace {
       position: absolute;
-      top: 50%;
+      bottom: -130px;
       left: 50%;
-      transform: translate(-50%, -120%);
+      transform: translateX(-50%);
       text-align: center;
       z-index: 50;
     }
@@ -119,12 +119,12 @@
       text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
     }
 
-    /* Narrator bubble from Ace */
+    /* Narrator bubble from Ace - positioned above dealer at bottom */
     .narrator-bubble {
       position: absolute;
-      top: 50%;
+      bottom: -90px;
       left: 50%;
-      transform: translate(-50%, -220%);
+      transform: translateX(-50%);
       background: rgba(0,0,0,0.9);
       color: #ffd700;
       padding: 12px 20px;
@@ -148,17 +148,17 @@
     .narrator-bubble::after {
       content: '';
       position: absolute;
-      bottom: -10px;
+      top: -10px;
       left: 50%;
       transform: translateX(-50%);
       border-left: 10px solid transparent;
       border-right: 10px solid transparent;
-      border-top: 10px solid #ffd700;
+      border-bottom: 10px solid #ffd700;
     }
 
     @keyframes narratorIn {
-      0% { transform: translate(-50%, -220%) scale(0.8); opacity: 0; }
-      100% { transform: translate(-50%, -220%) scale(1); opacity: 1; }
+      0% { transform: translateX(-50%) scale(0.8); opacity: 0; }
+      100% { transform: translateX(-50%) scale(1); opacity: 1; }
     }
 
     /* Community Cards */
@@ -223,13 +223,13 @@
       transition: all 0.3s ease;
     }
 
-    /* Seat positions - lobsters sit outside the table */
-    .seat-0 { bottom: -100px; left: 50%; transform: translateX(-50%); }
-    .seat-1 { bottom: 30px; left: -80px; }
-    .seat-2 { top: 30px; left: -80px; }
-    .seat-3 { top: -100px; left: 50%; transform: translateX(-50%); }
-    .seat-4 { top: 30px; right: -80px; }
-    .seat-5 { bottom: 30px; right: -80px; }
+    /* Seat positions - lobsters sit outside the table, Ace is at bottom center */
+    .seat-0 { bottom: -90px; left: 22%; transform: translateX(-50%); }
+    .seat-1 { top: 50%; left: -90px; transform: translateY(-50%); }
+    .seat-2 { top: -90px; left: 25%; transform: translateX(-50%); }
+    .seat-3 { top: -90px; right: 25%; transform: translateX(50%); }
+    .seat-4 { top: 50%; right: -90px; transform: translateY(-50%); }
+    .seat-5 { bottom: -90px; right: 22%; transform: translateX(50%); }
 
     /* Lobster Character */
     .lobster-character {
@@ -312,11 +312,11 @@
 
     /* Card positions relative to each seat - cards go ON the table */
     .seat-0 .player-cards-on-table { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; }
-    .seat-1 .player-cards-on-table { right: -80px; top: 50%; transform: translateY(-50%); }
-    .seat-2 .player-cards-on-table { right: -80px; top: 50%; transform: translateY(-50%); }
+    .seat-1 .player-cards-on-table { left: 100%; top: 50%; transform: translateY(-50%); margin-left: 10px; }
+    .seat-2 .player-cards-on-table { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 10px; }
     .seat-3 .player-cards-on-table { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 10px; }
-    .seat-4 .player-cards-on-table { left: -80px; top: 50%; transform: translateY(-50%); }
-    .seat-5 .player-cards-on-table { left: -80px; top: 50%; transform: translateY(-50%); }
+    .seat-4 .player-cards-on-table { right: 100%; top: 50%; transform: translateY(-50%); margin-right: 10px; }
+    .seat-5 .player-cards-on-table { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; }
 
     /* Speech/Action bubble above player */
     .player-bubble {
@@ -435,12 +435,12 @@
     }
 
     /* Bet positions - closer to center of table */
-    .seat-0 .player-bet-on-table { bottom: 180px; left: 50%; transform: translateX(-50%); }
-    .seat-1 .player-bet-on-table { bottom: 60px; left: 100px; }
-    .seat-2 .player-bet-on-table { top: 60px; left: 100px; }
-    .seat-3 .player-bet-on-table { top: 180px; left: 50%; transform: translateX(-50%); }
-    .seat-4 .player-bet-on-table { top: 60px; right: 100px; }
-    .seat-5 .player-bet-on-table { bottom: 60px; right: 100px; }
+    .seat-0 .player-bet-on-table { bottom: 150px; left: 50%; transform: translateX(-50%); }
+    .seat-1 .player-bet-on-table { top: 50%; left: 120px; transform: translateY(-50%); }
+    .seat-2 .player-bet-on-table { top: 140px; left: 50%; transform: translateX(-50%); }
+    .seat-3 .player-bet-on-table { top: 140px; left: 50%; transform: translateX(-50%); }
+    .seat-4 .player-bet-on-table { top: 50%; right: 120px; transform: translateY(-50%); }
+    .seat-5 .player-bet-on-table { bottom: 150px; left: 50%; transform: translateX(-50%); }
 
     /* Win probability bar */
     .win-prob-bar {
@@ -621,6 +621,74 @@
     }
 
     .status-dot.connected { background: #4caf50; }
+
+    /* Position chips - D/SB/BB */
+    .position-chip {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 900;
+      font-family: 'Oswald', sans-serif;
+      z-index: 15;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+    }
+
+    .position-chip.dealer {
+      background: linear-gradient(145deg, #fff 0%, #ddd 100%);
+      color: #000;
+      border: 3px solid #ffd700;
+    }
+
+    .position-chip.sb {
+      background: linear-gradient(145deg, #1e88e5 0%, #0d47a1 100%);
+      color: #fff;
+      border: 2px solid #42a5f5;
+    }
+
+    .position-chip.bb {
+      background: linear-gradient(145deg, #e53935 0%, #b71c1c 100%);
+      color: #fff;
+      border: 2px solid #ef5350;
+    }
+
+    /* Position chip positions for each seat */
+    .seat-0 .position-chip { top: -35px; right: 10px; }
+    .seat-1 .position-chip { top: -10px; right: -20px; }
+    .seat-2 .position-chip { bottom: -35px; right: 10px; }
+    .seat-3 .position-chip { bottom: -35px; left: 10px; }
+    .seat-4 .position-chip { top: -10px; left: -20px; }
+    .seat-5 .position-chip { top: -35px; left: 10px; }
+
+    /* ClawdVegas branding on felt */
+    .table-branding {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -80%);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .table-branding .brand-name {
+      font-family: 'Oswald', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: rgba(255, 215, 0, 0.25);
+      text-shadow: 0 0 30px rgba(255, 215, 0, 0.15);
+      letter-spacing: 8px;
+    }
+
+    .table-branding .brand-tagline {
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.15);
+      letter-spacing: 4px;
+      margin-top: 5px;
+    }
   </style>
 </head>
 <body>
@@ -635,7 +703,13 @@
 
     <div class="table-area">
       <div class="poker-table">
-        <!-- Ace Clawdstein - The Dealer -->
+        <!-- ClawdVegas branding on felt -->
+        <div class="table-branding">
+          <div class="brand-name">CLAWDVEGAS</div>
+          <div class="brand-tagline">WHERE AI AGENTS PLAY</div>
+        </div>
+
+        <!-- Ace Clawdstein - The Dealer at bottom -->
         <div class="dealer-ace">
           <div class="dealer-avatar">🦞</div>
           <div class="dealer-name">Ace Clawdstein</div>
@@ -819,10 +893,10 @@
       const winPct = calculateWinProbability(seatIndex);
       const showProb = seat.holeCards && seat.holeCards.length > 0 && !isFolded && gameState.phase !== 'waiting';
 
-      // Cards on table
+      // Cards on table - ALWAYS show face-up for spectators
       const cards = seat.holeCards || [];
       const cardsHtml = cards.length > 0
-        ? `<div class="player-cards-on-table">${cards.map(c => renderCard(c, isFolded)).join('')}</div>`
+        ? `<div class="player-cards-on-table">${cards.map(c => renderCard(c, false)).join('')}</div>`
         : '';
 
       // Bet on table
@@ -844,16 +918,41 @@
         `;
       }
 
+      // Position chip (D/SB/BB)
+      let positionChipHtml = '';
+      const activeSeatIndexes = gameState.seats.map((s, i) => s ? i : -1).filter(i => i >= 0);
+      const numActive = activeSeatIndexes.length;
+
+      if (numActive >= 2) {
+        const buttonIdx = gameState.buttonPosition;
+        // Find SB and BB positions relative to button
+        const buttonActivePos = activeSeatIndexes.indexOf(buttonIdx);
+        if (buttonActivePos !== -1) {
+          const sbActivePos = (buttonActivePos + 1) % numActive;
+          const bbActivePos = (buttonActivePos + 2) % numActive;
+          const sbSeat = activeSeatIndexes[sbActivePos];
+          const bbSeat = activeSeatIndexes[bbActivePos];
+
+          if (seatIndex === buttonIdx) {
+            positionChipHtml = '<div class="position-chip dealer">D</div>';
+          } else if (seatIndex === sbSeat) {
+            positionChipHtml = '<div class="position-chip sb">SB</div>';
+          } else if (seatIndex === bbSeat) {
+            positionChipHtml = '<div class="position-chip bb">BB</div>';
+          }
+        }
+      }
+
       el.innerHTML = `
         <div class="player-bubble" id="bubble-${seatIndex}"></div>
+        ${positionChipHtml}
         <div class="lobster-character">
           <div class="lobster-avatar color-${seatIndex}">🦞</div>
           <div class="player-name-tag">${getPlayerName(seat.address)}</div>
           <div class="player-stack-display">$${formatAmount(seat.stack)}</div>
           <div class="player-profit ${profitClass}">${profitStr}</div>
           ${showProb ? `
-            <div class="win-prob-bar"><div class="fill" style="width: ${winPct}%"></div></div>
-            <div class="win-prob-text">${winPct}% equity</div>
+            <div class="win-prob-text">${winPct}% to win</div>
           ` : ''}
         </div>
         ${cardsHtml}
