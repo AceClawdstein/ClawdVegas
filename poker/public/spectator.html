@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Texas Molt'em - Live Spectator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* Left side - Poker Table */
+    .table-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #333;
+      margin-bottom: 15px;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    }
+
+    .header .hand-info {
+      font-size: 0.9rem;
+      color: #888;
+    }
+
+    .phase-badge {
+      background: #e94560;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .table-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .poker-table {
+      width: 700px;
+      height: 400px;
+      background: linear-gradient(145deg, #1b5e20 0%, #2e7d32 50%, #1b5e20 100%);
+      border-radius: 200px;
+      border: 15px solid #5d4037;
+      box-shadow:
+        inset 0 0 50px rgba(0,0,0,0.5),
+        0 10px 30px rgba(0,0,0,0.5),
+        0 0 0 5px #3e2723;
+      position: relative;
+    }
+
+    .poker-table::before {
+      content: '';
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      right: 15px;
+      bottom: 15px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 180px;
+    }
+
+    /* Community Cards */
+    .community-cards {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -70%);
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Pot Display */
+    .pot-display {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, 20px);
+      background: rgba(0,0,0,0.7);
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-weight: bold;
+      color: #ffd700;
+      font-size: 1.1rem;
+    }
+
+    /* Player Positions - 6 max table */
+    .player-seat {
+      position: absolute;
+      width: 160px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    .player-seat.active {
+      transform: scale(1.05);
+    }
+
+    .player-seat.active .player-info {
+      box-shadow: 0 0 20px #ffd700, 0 0 40px rgba(255, 215, 0, 0.3);
+      border-color: #ffd700;
+    }
+
+    .player-seat.folded {
+      opacity: 0.5;
+    }
+
+    .player-seat.winner .player-info {
+      box-shadow: 0 0 30px #4caf50, 0 0 60px rgba(76, 175, 80, 0.5);
+      border-color: #4caf50;
+    }
+
+    /* Seat positions */
+    .seat-0 { bottom: -80px; left: 50%; transform: translateX(-50%); }
+    .seat-1 { bottom: 20px; left: -30px; }
+    .seat-2 { top: 20px; left: -30px; }
+    .seat-3 { top: -80px; left: 50%; transform: translateX(-50%); }
+    .seat-4 { top: 20px; right: -30px; }
+    .seat-5 { bottom: 20px; right: -30px; }
+
+    .player-info {
+      background: linear-gradient(180deg, #2d2d44 0%, #1a1a2e 100%);
+      border: 2px solid #444;
+      border-radius: 10px;
+      padding: 10px;
+      width: 100%;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .player-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 5px;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .player-stack {
+      color: #4caf50;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+
+    .player-bet {
+      position: absolute;
+      background: rgba(0,0,0,0.8);
+      color: #ffd700;
+      padding: 4px 10px;
+      border-radius: 15px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    /* Bet positions relative to seats */
+    .seat-0 .player-bet { top: -30px; }
+    .seat-1 .player-bet { top: 50%; right: -60px; transform: translateY(-50%); }
+    .seat-2 .player-bet { bottom: 50%; right: -60px; transform: translateY(50%); }
+    .seat-3 .player-bet { bottom: -30px; }
+    .seat-4 .player-bet { bottom: 50%; left: -60px; transform: translateY(50%); }
+    .seat-5 .player-bet { top: 50%; left: -60px; transform: translateY(-50%); }
+
+    .player-cards {
+      display: flex;
+      gap: 4px;
+      margin-top: 8px;
+      justify-content: center;
+    }
+
+    .win-odds {
+      font-size: 0.75rem;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .win-odds.good { color: #4caf50; }
+    .win-odds.great { color: #ffd700; }
+
+    /* Dealer Button */
+    .dealer-button {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(145deg, #fff 0%, #ddd 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.7rem;
+      color: #333;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      z-index: 10;
+    }
+
+    /* Card Styles */
+    .card {
+      width: 45px;
+      height: 63px;
+      background: white;
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.1rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    .card.red { color: #e53935; }
+    .card.black { color: #212121; }
+
+    .card.hidden {
+      background: linear-gradient(145deg, #1565c0 0%, #0d47a1 100%);
+      color: transparent;
+    }
+
+    .card.hidden::after {
+      content: '';
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      right: 5px;
+      bottom: 5px;
+      background: repeating-linear-gradient(
+        45deg,
+        #1565c0,
+        #1565c0 5px,
+        #0d47a1 5px,
+        #0d47a1 10px
+      );
+      border-radius: 3px;
+    }
+
+    .card .rank {
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .card .suit {
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+
+    .community-cards .card {
+      width: 55px;
+      height: 77px;
+    }
+
+    .community-cards .card .rank {
+      font-size: 1.2rem;
+    }
+
+    .community-cards .card .suit {
+      font-size: 1.5rem;
+    }
+
+    /* Empty seat */
+    .player-seat.empty .player-info {
+      background: rgba(0,0,0,0.3);
+      border: 2px dashed #444;
+    }
+
+    .player-seat.empty .player-name {
+      color: #666;
+    }
+
+    /* Right side - Activity Log */
+    .activity-area {
+      width: 350px;
+      background: #0f0f1a;
+      border-left: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .activity-header {
+      padding: 15px 20px;
+      background: #1a1a2e;
+      border-bottom: 1px solid #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .activity-header h2 {
+      font-size: 1rem;
+      color: #e94560;
+    }
+
+    .live-badge {
+      background: #e53935;
+      color: white;
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: bold;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .activity-log {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .activity-log::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .activity-log::-webkit-scrollbar-track {
+      background: #1a1a2e;
+    }
+
+    .activity-log::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 3px;
+    }
+
+    .log-entry {
+      padding: 8px 12px;
+      margin-bottom: 5px;
+      border-radius: 5px;
+      font-size: 0.85rem;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .log-entry.action {
+      background: rgba(255, 255, 255, 0.05);
+      border-left: 3px solid #2196f3;
+    }
+
+    .log-entry.chat {
+      background: rgba(233, 69, 96, 0.1);
+      border-left: 3px solid #e94560;
+    }
+
+    .log-entry.system {
+      background: rgba(255, 215, 0, 0.1);
+      border-left: 3px solid #ffd700;
+      font-style: italic;
+    }
+
+    .log-entry.win {
+      background: rgba(76, 175, 80, 0.2);
+      border-left: 3px solid #4caf50;
+      font-weight: bold;
+    }
+
+    .log-entry .player {
+      color: #4fc3f7;
+      font-weight: 600;
+    }
+
+    .log-entry .amount {
+      color: #ffd700;
+      font-weight: bold;
+    }
+
+    .log-entry .timestamp {
+      color: #666;
+      font-size: 0.75rem;
+      margin-left: 8px;
+    }
+
+    /* Controls */
+    .controls {
+      padding: 15px;
+      background: #1a1a2e;
+      border-top: 1px solid #333;
+    }
+
+    .demo-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(145deg, #e94560 0%, #c73e54 100%);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .demo-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
+    }
+
+    .demo-btn:disabled {
+      background: #444;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Connection status */
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 10px;
+      justify-content: center;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f44336;
+    }
+
+    .status-dot.connected {
+      background: #4caf50;
+    }
+
+    /* Hand result overlay */
+    .hand-result {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.9);
+      padding: 20px 40px;
+      border-radius: 15px;
+      text-align: center;
+      z-index: 100;
+      animation: popIn 0.3s ease;
+      display: none;
+    }
+
+    .hand-result.show {
+      display: block;
+    }
+
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    .hand-result .winner-name {
+      font-size: 1.5rem;
+      color: #ffd700;
+      font-weight: bold;
+    }
+
+    .hand-result .hand-name {
+      color: #4caf50;
+      font-size: 1.1rem;
+      margin-top: 5px;
+    }
+
+    .hand-result .win-amount {
+      color: #fff;
+      font-size: 1.2rem;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Left: Poker Table -->
+    <div class="table-area">
+      <div class="header">
+        <h1>Texas Molt'em</h1>
+        <span class="hand-info">Hand #<span id="handNumber">0</span></span>
+        <span class="phase-badge" id="phase">WAITING</span>
+      </div>
+
+      <div class="table-container">
+        <div class="poker-table">
+          <!-- Community Cards -->
+          <div class="community-cards" id="communityCards"></div>
+
+          <!-- Pot -->
+          <div class="pot-display">
+            POT: $<span id="potAmount">0</span>
+          </div>
+
+          <!-- Dealer Button -->
+          <div class="dealer-button" id="dealerButton" style="display: none;">D</div>
+
+          <!-- Player Seats -->
+          <div class="player-seat seat-0" id="seat-0"></div>
+          <div class="player-seat seat-1" id="seat-1"></div>
+          <div class="player-seat seat-2" id="seat-2"></div>
+          <div class="player-seat seat-3" id="seat-3"></div>
+          <div class="player-seat seat-4" id="seat-4"></div>
+          <div class="player-seat seat-5" id="seat-5"></div>
+
+          <!-- Hand Result Overlay -->
+          <div class="hand-result" id="handResult">
+            <div class="winner-name" id="winnerName"></div>
+            <div class="hand-name" id="handName"></div>
+            <div class="win-amount" id="winAmount"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Activity Log -->
+    <div class="activity-area">
+      <div class="activity-header">
+        <h2>Live Activity</h2>
+        <span class="live-badge">LIVE</span>
+      </div>
+
+      <div class="activity-log" id="activityLog"></div>
+
+      <div class="controls">
+        <button class="demo-btn" id="demoBtn" onclick="startDemo()">
+          Start Demo Game
+        </button>
+        <div class="connection-status">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="connectionText">Connecting...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let ws = null;
+    let gameState = {
+      phase: 'waiting',
+      handNumber: 0,
+      buttonPosition: 0,
+      activePosition: null,
+      communityCards: [],
+      seats: [null, null, null, null, null, null],
+      pot: 0n
+    };
+
+    // Agent name mapping
+    const AGENT_NAMES = {
+      '0xDEMO000000000000000000000000000000000001': 'AlphaBot',
+      '0xDEMO000000000000000000000000000000000002': 'BetaBot',
+      '0xDEMO000000000000000000000000000000000003': 'GammaBot',
+      '0xDEMO000000000000000000000000000000000004': 'DeltaBot',
+      '0xDEMO000000000000000000000000000000000005': 'EpsilonBot',
+      '0xDEMO000000000000000000000000000000000006': 'ZetaBot',
+    };
+
+    // Format helpers
+    function formatAmount(amount) {
+      const num = typeof amount === 'string' ? parseInt(amount) : Number(amount);
+      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+      if (num >= 1000) return (num / 1000).toFixed(0) + 'K';
+      return num.toLocaleString();
+    }
+
+    function getPlayerName(address) {
+      return AGENT_NAMES[address] || address.slice(0, 6) + '...' + address.slice(-4);
+    }
+
+    function getSuitSymbol(suit) {
+      const suits = { h: '♥', d: '♦', c: '♣', s: '♠' };
+      return suits[suit] || suit;
+    }
+
+    function isRedSuit(suit) {
+      return suit === 'h' || suit === 'd';
+    }
+
+    // Render card
+    function renderCard(card, hidden = false) {
+      if (!card || hidden) {
+        return '<div class="card hidden"></div>';
+      }
+      const colorClass = isRedSuit(card.suit) ? 'red' : 'black';
+      return `
+        <div class="card ${colorClass}">
+          <span class="rank">${card.rank}</span>
+          <span class="suit">${getSuitSymbol(card.suit)}</span>
+        </div>
+      `;
+    }
+
+    // Render player seat
+    function renderSeat(seatIndex) {
+      const seat = gameState.seats[seatIndex];
+      const el = document.getElementById(`seat-${seatIndex}`);
+
+      if (!seat) {
+        el.className = `player-seat seat-${seatIndex} empty`;
+        el.innerHTML = `
+          <div class="player-info">
+            <div class="player-name">Empty Seat</div>
+          </div>
+        `;
+        return;
+      }
+
+      const isActive = gameState.activePosition === seatIndex;
+      const isFolded = seat.isFolded;
+      const classes = ['player-seat', `seat-${seatIndex}`];
+      if (isActive) classes.push('active');
+      if (isFolded) classes.push('folded');
+
+      el.className = classes.join(' ');
+
+      const cards = seat.holeCards || [];
+      const cardsHtml = cards.length > 0
+        ? `<div class="player-cards">${cards.map(c => renderCard(c)).join('')}</div>`
+        : '';
+
+      const betHtml = seat.currentBet && BigInt(seat.currentBet) > 0n
+        ? `<div class="player-bet">$${formatAmount(seat.currentBet)}</div>`
+        : '';
+
+      el.innerHTML = `
+        <div class="player-info">
+          <div class="player-name">${getPlayerName(seat.address)}</div>
+          <div class="player-stack">$${formatAmount(seat.stack)}</div>
+          ${cardsHtml}
+        </div>
+        ${betHtml}
+      `;
+    }
+
+    // Render community cards
+    function renderCommunityCards() {
+      const el = document.getElementById('communityCards');
+      el.innerHTML = gameState.communityCards.map(c => renderCard(c)).join('');
+    }
+
+    // Render dealer button
+    function renderDealerButton() {
+      const btn = document.getElementById('dealerButton');
+      const activePlayers = gameState.seats.filter(s => s !== null);
+
+      if (activePlayers.length < 2 || gameState.phase === 'waiting') {
+        btn.style.display = 'none';
+        return;
+      }
+
+      btn.style.display = 'flex';
+
+      // Position near the button seat
+      const positions = [
+        { bottom: '30px', left: '45%' },    // seat 0
+        { bottom: '80px', left: '80px' },   // seat 1
+        { top: '80px', left: '80px' },      // seat 2
+        { top: '30px', left: '45%' },       // seat 3
+        { top: '80px', right: '80px' },     // seat 4
+        { bottom: '80px', right: '80px' },  // seat 5
+      ];
+
+      const pos = positions[gameState.buttonPosition] || positions[0];
+      Object.assign(btn.style, { top: '', bottom: '', left: '', right: '' });
+      Object.assign(btn.style, pos);
+    }
+
+    // Calculate pot from current bets
+    function calculatePot() {
+      let pot = 0n;
+      for (const seat of gameState.seats) {
+        if (seat && seat.currentBet) {
+          pot += BigInt(seat.currentBet);
+        }
+      }
+      return pot;
+    }
+
+    // Render full state
+    function renderState() {
+      document.getElementById('handNumber').textContent = gameState.handNumber;
+      document.getElementById('phase').textContent = gameState.phase.toUpperCase();
+      document.getElementById('potAmount').textContent = formatAmount(calculatePot());
+
+      for (let i = 0; i < 6; i++) {
+        renderSeat(i);
+      }
+
+      renderCommunityCards();
+      renderDealerButton();
+    }
+
+    // Add log entry
+    function addLogEntry(type, content) {
+      const log = document.getElementById('activityLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+
+      const time = new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+
+      entry.innerHTML = `${content}<span class="timestamp">${time}</span>`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // Show hand result
+    function showHandResult(winners, timeout = 3000) {
+      const el = document.getElementById('handResult');
+      if (winners && winners.length > 0) {
+        const winner = winners[0];
+        const seat = gameState.seats[winner.seatIndex];
+        document.getElementById('winnerName').textContent =
+          seat ? getPlayerName(seat.address) + ' WINS!' : 'Winner!';
+        document.getElementById('winAmount').textContent =
+          '$' + formatAmount(winner.amount);
+
+        // Mark winner seat
+        const seatEl = document.getElementById(`seat-${winner.seatIndex}`);
+        seatEl.classList.add('winner');
+
+        el.classList.add('show');
+        setTimeout(() => {
+          el.classList.remove('show');
+          seatEl.classList.remove('winner');
+        }, timeout);
+      }
+    }
+
+    // WebSocket connection
+    function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}?role=spectator`;
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        document.getElementById('statusDot').classList.add('connected');
+        document.getElementById('connectionText').textContent = 'Connected';
+        addLogEntry('system', 'Connected to server');
+      };
+
+      ws.onclose = () => {
+        document.getElementById('statusDot').classList.remove('connected');
+        document.getElementById('connectionText').textContent = 'Disconnected';
+        addLogEntry('system', 'Disconnected from server');
+        // Reconnect after 3 seconds
+        setTimeout(connectWebSocket, 3000);
+      };
+
+      ws.onerror = () => {
+        document.getElementById('connectionText').textContent = 'Connection error';
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          handleEvent(msg.event, msg.data);
+        } catch (e) {
+          console.error('Failed to parse message:', e);
+        }
+      };
+    }
+
+    // Handle WebSocket events
+    function handleEvent(event, data) {
+      switch (event) {
+        case 'connected':
+          // Initial state
+          if (data) {
+            gameState = {
+              phase: data.phase || 'waiting',
+              handNumber: data.handNumber || 0,
+              buttonPosition: data.buttonPosition || 0,
+              activePosition: data.activePosition,
+              communityCards: data.communityCards || [],
+              seats: data.seats || [null, null, null, null, null, null]
+            };
+            renderState();
+          }
+          break;
+
+        case 'player_sat':
+          addLogEntry('action', `<span class="player">${getPlayerName(data.address)}</span> joins seat ${data.seatIndex}`);
+          break;
+
+        case 'player_stood':
+          addLogEntry('action', `<span class="player">${getPlayerName(data.address)}</span> leaves the table`);
+          break;
+
+        case 'hand_started':
+          gameState.handNumber = data.handNumber;
+          gameState.buttonPosition = data.button;
+          gameState.phase = 'preflop';
+          gameState.communityCards = [];
+          // Clear bets and cards
+          for (const seat of gameState.seats) {
+            if (seat) {
+              seat.currentBet = '0';
+              seat.holeCards = null;
+              seat.isFolded = false;
+            }
+          }
+          addLogEntry('system', `Hand #${data.handNumber} begins`);
+          renderState();
+          break;
+
+        case 'hole_cards_dealt':
+          if (gameState.seats[data.seatIndex]) {
+            gameState.seats[data.seatIndex].holeCards = data.cards;
+            renderSeat(data.seatIndex);
+          }
+          break;
+
+        case 'blinds_posted':
+          addLogEntry('action',
+            `Blinds: <span class="amount">$${formatAmount(data.smallBlind.amount)}</span> / <span class="amount">$${formatAmount(data.bigBlind.amount)}</span>`
+          );
+          break;
+
+        case 'action_on':
+          gameState.activePosition = data.seatIndex;
+          renderState();
+          break;
+
+        case 'player_acted':
+          const playerName = getPlayerName(data.address);
+          const amount = data.amount !== '0' ? ` <span class="amount">$${formatAmount(data.amount)}</span>` : '';
+          addLogEntry('action', `<span class="player">${playerName}</span> ${data.action}${amount}`);
+
+          if (gameState.seats[data.seatIndex]) {
+            gameState.seats[data.seatIndex].stack = data.newStack;
+            if (data.action === 'fold') {
+              gameState.seats[data.seatIndex].isFolded = true;
+            }
+          }
+          renderState();
+          break;
+
+        case 'flop_dealt':
+          gameState.phase = 'flop';
+          gameState.communityCards = data.cards;
+          addLogEntry('system', `Flop: ${data.cards.map(c => c.display).join(' ')}`);
+          renderState();
+          break;
+
+        case 'turn_dealt':
+          gameState.phase = 'turn';
+          gameState.communityCards.push(data.card);
+          addLogEntry('system', `Turn: ${data.card.display}`);
+          renderState();
+          break;
+
+        case 'river_dealt':
+          gameState.phase = 'river';
+          gameState.communityCards.push(data.card);
+          addLogEntry('system', `River: ${data.card.display}`);
+          renderState();
+          break;
+
+        case 'showdown':
+          gameState.phase = 'showdown';
+          for (const hand of data.hands) {
+            const seat = gameState.seats[hand.seatIndex];
+            if (seat) {
+              seat.holeCards = hand.cards;
+              const name = getPlayerName(seat.address);
+              addLogEntry('action', `<span class="player">${name}</span> shows ${hand.handName}`);
+            }
+          }
+          renderState();
+          break;
+
+        case 'pot_awarded':
+          for (const winner of data.winners) {
+            const seat = gameState.seats[winner.seatIndex];
+            if (seat) {
+              const name = getPlayerName(seat.address);
+              addLogEntry('win', `<span class="player">${name}</span> wins <span class="amount">$${formatAmount(winner.amount)}</span>!`);
+            }
+          }
+          showHandResult(data.winners);
+          break;
+
+        case 'hand_complete':
+          gameState.phase = 'complete';
+          gameState.activePosition = null;
+          renderState();
+          break;
+
+        case 'phase_changed':
+          gameState.phase = data.phase;
+          renderState();
+          break;
+
+        case 'chat':
+          const chatName = getPlayerName(data.address);
+          addLogEntry('chat', `<span class="player">${chatName}</span>: "${data.message}"`);
+          break;
+      }
+    }
+
+    // Start demo game
+    async function startDemo() {
+      const btn = document.getElementById('demoBtn');
+      btn.disabled = true;
+      btn.textContent = 'Starting...';
+
+      try {
+        const response = await fetch('/api/operator/demo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ numAgents: 4, hands: 3 })
+        });
+
+        if (!response.ok) {
+          throw new Error('Demo failed to start');
+        }
+
+        addLogEntry('system', 'Demo game started!');
+      } catch (e) {
+        addLogEntry('system', 'Failed to start demo: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Start Demo Game';
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      renderState();
+      connectWebSocket();
+    });
+  </script>
+</body>
+</html>

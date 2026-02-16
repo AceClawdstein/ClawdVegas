@@ -636,7 +636,7 @@ function makeAgentDecision(agent, validActions) {
     }
     return { action: 'fold' };
 }
-async function runDemoHand(agents, log) {
+async function runDemoHand(agents, log, actionDelayMs = 100) {
     // Wait for hand to actually start (table has 3-second delay before auto-starting)
     // We need to wait for an active phase: preflop, flop, turn, river, showdown
     const activePhasesSet = new Set(['preflop', 'flop', 'turn', 'river', 'showdown']);
@@ -698,7 +698,7 @@ async function runDemoHand(agents, log) {
             log.push(`${agent.name} action failed: ${actionResult.error}`);
         }
         actionCount++;
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, actionDelayMs));
     }
 }
 /**
@@ -708,12 +708,20 @@ async function runDemoHand(agents, log) {
  * - numAgents: number of agents to seat (2-6, default 4)
  * - hands: number of hands to play (1-10, default 3)
  * - buyIn: buy-in amount per agent (default 1000000)
+ * - speed: 'fast' (100ms), 'normal' (800ms), 'slow' (1500ms) - default 'normal'
  */
 app.post('/api/operator/demo', async (req, res) => {
-    const { numAgents = 4, hands = 3, buyIn = '1000000' } = req.body;
+    const { numAgents = 4, hands = 3, buyIn = '1000000', speed = 'normal' } = req.body;
     const agentCount = Math.max(2, Math.min(6, Number(numAgents)));
     const handCount = Math.max(1, Math.min(10, Number(hands)));
     const buyInAmount = BigInt(buyIn);
+    // Action delay based on speed
+    const speedDelays = {
+        fast: 100,
+        normal: 800,
+        slow: 1500,
+    };
+    const actionDelayMs = speedDelays[speed] || 800;
     const selectedAgents = DEMO_AGENTS.slice(0, agentCount);
     const log = [];
     log.push(`Starting demo with ${agentCount} agents, ${handCount} hands`);
@@ -761,7 +769,7 @@ app.post('/api/operator/demo', async (req, res) => {
             break;
         }
         // Run the hand
-        await runDemoHand(selectedAgents, log);
+        await runDemoHand(selectedAgents, log, actionDelayMs);
         // Wait between hands
         await new Promise(r => setTimeout(r, 500));
     }
