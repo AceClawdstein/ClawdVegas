@@ -48,6 +48,26 @@
       text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
     }
 
+    .header h1 a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .header h1 a:hover {
+      text-decoration: underline;
+    }
+
+    .back-link {
+      color: #888;
+      text-decoration: none;
+      font-size: 0.85rem;
+      margin-right: 15px;
+    }
+
+    .back-link:hover {
+      color: #ffd700;
+    }
+
     .header .hand-info {
       font-size: 0.9rem;
       color: #888;
@@ -538,7 +558,8 @@
     <!-- Left: Poker Table -->
     <div class="table-area">
       <div class="header">
-        <h1>Texas Molt'em</h1>
+        <a href="/" class="back-link">← ClawdVegas</a>
+        <h1><a href="/spectator.html">Texas Molt'em</a></h1>
         <span class="hand-info">Hand #<span id="handNumber">0</span></span>
         <span class="phase-badge" id="phase">WAITING</span>
       </div>

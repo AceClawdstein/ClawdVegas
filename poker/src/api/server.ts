@@ -22,6 +22,7 @@ import { ChipLedger } from '../ledger/chip-ledger.js';
 import { generateChallenge, verifyChallenge, requireAuth } from './auth.js';
 import { authRateLimit, gameRateLimit, queryRateLimit } from './ratelimit.js';
 import { createLLMAgents, type LLMAgent } from '../agents/llm-agent.js';
+import { getOpponentHistoryStore, type OpponentProfile } from '../ledger/history.js';
 
 // Extend Express Request to include authenticated wallet
 declare global {
@@ -61,8 +62,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Static files
+// Static files - serve from poker/public and parent public folder
 app.use(express.static(path.join(__dirname, '../../public')));
+app.use(express.static(path.join(__dirname, '../../../public')));
 
 // --- Game + Ledger instances ---
 const table = createTable();
@@ -632,6 +634,76 @@ app.get('/api/operator/house', requireOperator, (_req: Request, res: Response) =
     totalOut: pnl.totalOut.toString(),
     profit: pnl.profit.toString(),
   });
+});
+
+// ===========================
+// OPPONENT HISTORY ENDPOINTS
+// ===========================
+
+const historyStore = getOpponentHistoryStore(`${DATA_DIR}/opponent-history`);
+
+/** GET /api/history/opponent/:address — Get opponent profile and stats */
+app.get('/api/history/opponent/:address', queryRateLimit, requireAuth, (req: Request, res: Response) => {
+  const { address } = req.params;
+  if (!address) {
+    res.status(400).json({ error: 'Address required' });
+    return;
+  }
+
+  const profile = historyStore.getProfile(address);
+  const summary = historyStore.getSummary(address);
+
+  res.json({
+    address: profile.address,
+    firstSeen: profile.firstSeen,
+    lastSeen: profile.lastSeen,
+    handsPlayed: profile.stats.handsPlayed,
+    stats: {
+      vpip: profile.stats.vpip,
+      pfr: profile.stats.pfr,
+      aggression: profile.stats.aggression,
+      cbet: profile.stats.cbet,
+      foldTo3Bet: profile.stats.foldTo3Bet,
+      wtsd: profile.stats.wtsd,
+      wsd: profile.stats.wsd,
+    },
+    playerType: summary.type,
+    notes: profile.notes.slice(-20), // Last 20 notes
+    showdowns: profile.showdowns.slice(-10), // Last 10 showdowns
+  });
+});
+
+/** POST /api/history/opponent/:address/notes — Add a note about an opponent */
+app.post('/api/history/opponent/:address/notes', gameRateLimit, requireAuth, (req: Request, res: Response) => {
+  const { address } = req.params;
+  const { note, handId } = req.body as { note?: string; handId?: string };
+
+  if (!address) {
+    res.status(400).json({ error: 'Address required' });
+    return;
+  }
+  if (!note) {
+    res.status(400).json({ error: 'Note required' });
+    return;
+  }
+
+  historyStore.addNote(address, note, handId);
+  res.json({ success: true });
+});
+
+/** GET /api/history/all — Get summary of all known opponents (for dashboard) */
+app.get('/api/history/all', queryRateLimit, requireAuth, (_req: Request, res: Response) => {
+  const profiles = historyStore.getAllProfiles();
+  const summaries = profiles.map(p => ({
+    address: p.address,
+    ...historyStore.getSummary(p.address),
+    lastSeen: p.lastSeen,
+  }));
+
+  // Sort by hands played descending
+  summaries.sort((a, b) => b.handsPlayed - a.handsPlayed);
+
+  res.json({ opponents: summaries });
 });
 
 // ===========================
