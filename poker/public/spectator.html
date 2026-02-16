@@ -318,45 +318,50 @@
     .seat-4 .player-cards-on-table { right: 100%; top: 50%; transform: translateY(-50%); margin-right: 10px; }
     .seat-5 .player-cards-on-table { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; }
 
-    /* Speech/Action bubble above player */
+    /* Speech/Action bubble above player - STATIC positioned elements */
     .player-bubble {
       position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      margin-bottom: 80px;
-      padding: 10px 18px;
-      border-radius: 15px;
+      padding: 12px 20px;
+      border-radius: 18px;
       font-family: 'Oswald', sans-serif;
-      font-size: 1rem;
+      font-size: 1.1rem;
       font-weight: 700;
       text-align: center;
       z-index: 200;
       opacity: 0;
       pointer-events: none;
       white-space: nowrap;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+      box-shadow: 0 5px 25px rgba(0,0,0,0.6);
+      transition: opacity 0.2s ease;
     }
 
     .player-bubble::after {
       content: '';
       position: absolute;
-      bottom: -10px;
+      bottom: -12px;
       left: 50%;
       transform: translateX(-50%);
-      border-left: 10px solid transparent;
-      border-right: 10px solid transparent;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
     }
 
     .player-bubble.show {
       opacity: 1;
-      animation: bubblePop 0.3s ease;
+      animation: bubblePop 0.3s ease forwards;
     }
 
     @keyframes bubblePop {
-      0% { transform: translateX(-50%) scale(0.5); opacity: 0; }
-      100% { transform: translateX(-50%) scale(1); opacity: 1; }
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
     }
+
+    /* Position each bubble above its corresponding seat */
+    .bubble-seat-0 { bottom: 70px; left: 22%; transform: translateX(-50%); }
+    .bubble-seat-1 { top: 50%; left: 80px; transform: translateY(-100%); }
+    .bubble-seat-2 { top: 70px; left: 25%; transform: translateX(-50%); }
+    .bubble-seat-3 { top: 70px; right: 25%; transform: translateX(50%); }
+    .bubble-seat-4 { top: 50%; right: 80px; transform: translateY(-100%); }
+    .bubble-seat-5 { bottom: 70px; right: 22%; transform: translateX(50%); }
 
     /* Action bubble styles */
     .player-bubble.action-fold {
@@ -735,6 +740,14 @@
         <div class="player-seat seat-4" id="seat-4"></div>
         <div class="player-seat seat-5" id="seat-5"></div>
 
+        <!-- Static Speech Bubbles (outside seats so they don't get destroyed) -->
+        <div class="player-bubble bubble-seat-0" id="bubble-0"></div>
+        <div class="player-bubble bubble-seat-1" id="bubble-1"></div>
+        <div class="player-bubble bubble-seat-2" id="bubble-2"></div>
+        <div class="player-bubble bubble-seat-3" id="bubble-3"></div>
+        <div class="player-bubble bubble-seat-4" id="bubble-4"></div>
+        <div class="player-bubble bubble-seat-5" id="bubble-5"></div>
+
         <!-- Winner Overlay -->
         <div class="winner-overlay" id="winnerOverlay">
           <div class="winner-name" id="winnerName"></div>
@@ -944,7 +957,6 @@
       }
 
       el.innerHTML = `
-        <div class="player-bubble" id="bubble-${seatIndex}"></div>
         ${positionChipHtml}
         <div class="lobster-character">
           <div class="lobster-avatar color-${seatIndex}">🦞</div>
@@ -983,14 +995,22 @@
     }
 
     // Show action bubble above specific player
-    function showPlayerBubble(seatIndex, text, type, duration = 2500) {
+    function showPlayerBubble(seatIndex, text, type, duration = 3000) {
       const bubble = document.getElementById(`bubble-${seatIndex}`);
-      if (!bubble) return;
+      if (!bubble) {
+        console.log('Bubble not found for seat', seatIndex);
+        return;
+      }
+
+      // Clear any existing timeout
+      if (bubble._hideTimeout) clearTimeout(bubble._hideTimeout);
 
       bubble.textContent = text;
-      bubble.className = `player-bubble ${type} show`;
+      bubble.className = `player-bubble bubble-seat-${seatIndex} ${type} show`;
 
-      setTimeout(() => {
+      console.log('Showing bubble:', seatIndex, text, type);
+
+      bubble._hideTimeout = setTimeout(() => {
         bubble.classList.remove('show');
       }, duration);
     }
@@ -1142,8 +1162,17 @@
           if (data.bigBlind && gameState.seats[data.bigBlind.seat]) {
             gameState.seats[data.bigBlind.seat].currentBet = data.bigBlind.amount;
           }
-          aceNarrates(`Blinds are $${formatAmount(data.smallBlind.amount)} / $${formatAmount(data.bigBlind.amount)}`, 2500);
           renderState();
+          // Show blind posting bubbles
+          if (data.smallBlind) {
+            showPlayerBubble(data.smallBlind.seat, `SB $${formatAmount(data.smallBlind.amount)}`, 'action-bet', 2500);
+          }
+          if (data.bigBlind) {
+            setTimeout(() => {
+              showPlayerBubble(data.bigBlind.seat, `BB $${formatAmount(data.bigBlind.amount)}`, 'action-bet', 2500);
+            }, 300);
+          }
+          aceNarrates(`Blinds are $${formatAmount(data.smallBlind.amount)} / $${formatAmount(data.bigBlind.amount)}`, 2500);
           break;
 
         case 'action_on':
@@ -1152,8 +1181,7 @@
           break;
 
         case 'player_acted':
-          const playerName = getPlayerName(data.address);
-          const seatIdx = data.seatIndex;
+          const actingSeatIdx = data.seatIndex;
           let actionText = data.action.toUpperCase();
           let bubbleType = 'action-' + data.action.toLowerCase().replace('_', '-');
 
@@ -1161,23 +1189,24 @@
             actionText += ' $' + formatAmount(data.amount);
           }
 
-          // Show bubble above the player who acted
-          showPlayerBubble(seatIdx, actionText, bubbleType, 2500);
-
-          if (gameState.seats[seatIdx]) {
-            gameState.seats[seatIdx].stack = data.newStack;
+          // Update game state first
+          if (gameState.seats[actingSeatIdx]) {
+            gameState.seats[actingSeatIdx].stack = data.newStack;
             if (data.action === 'fold') {
-              gameState.seats[seatIdx].isFolded = true;
-              gameState.seats[seatIdx].currentBet = '0';
+              gameState.seats[actingSeatIdx].isFolded = true;
+              gameState.seats[actingSeatIdx].currentBet = '0';
             } else if (['bet', 'raise', 'call'].includes(data.action)) {
-              if (data.totalBet) gameState.seats[seatIdx].currentBet = data.totalBet;
+              if (data.totalBet) gameState.seats[actingSeatIdx].currentBet = data.totalBet;
             }
             if (data.action === 'all_in' || data.action === 'all-in') {
-              gameState.seats[seatIdx].isAllIn = true;
+              gameState.seats[actingSeatIdx].isAllIn = true;
             }
           }
           gameState.activePosition = null;
           renderState();
+
+          // Show bubble AFTER render so it doesn't get destroyed
+          showPlayerBubble(actingSeatIdx, actionText, bubbleType, 3000);
           break;
 
         case 'flop_dealt':
