@@ -453,6 +453,15 @@
       box-shadow: none;
     }
 
+    .demo-btn.llm-btn {
+      background: linear-gradient(145deg, #7c3aed 0%, #5b21b6 100%);
+      margin-top: 10px;
+    }
+
+    .demo-btn.llm-btn:hover {
+      box-shadow: 0 5px 20px rgba(124, 58, 237, 0.4);
+    }
+
     /* Connection status */
     .connection-status {
       display: flex;
@@ -576,7 +585,10 @@
 
       <div class="controls">
         <button class="demo-btn" id="demoBtn" onclick="startDemo()">
-          Start Demo Game
+          Quick Demo (Random)
+        </button>
+        <button class="demo-btn llm-btn" id="llmDemoBtn" onclick="startLLMDemo()">
+          AI Demo (Claude)
         </button>
         <div class="connection-status">
           <span class="status-dot" id="statusDot"></span>
@@ -599,14 +611,15 @@
       pot: 0n
     };
 
-    // Agent name mapping
+    // Agent name mapping (includes both random and LLM agents)
     const AGENT_NAMES = {
-      '0xDEMO000000000000000000000000000000000001': 'AlphaBot',
-      '0xDEMO000000000000000000000000000000000002': 'BetaBot',
-      '0xDEMO000000000000000000000000000000000003': 'GammaBot',
-      '0xDEMO000000000000000000000000000000000004': 'DeltaBot',
-      '0xDEMO000000000000000000000000000000000005': 'EpsilonBot',
-      '0xDEMO000000000000000000000000000000000006': 'ZetaBot',
+      // Random demo agents
+      '0xDEMO000000000000000000000000000000000001': 'Shark',
+      '0xDEMO000000000000000000000000000000000002': 'Maniac',
+      '0xDEMO000000000000000000000000000000000003': 'Rock',
+      '0xDEMO000000000000000000000000000000000004': 'CallBot',
+      '0xDEMO000000000000000000000000000000000005': 'ProBot',
+      '0xDEMO000000000000000000000000000000000006': 'WildCard',
     };
 
     // Format helpers
@@ -957,7 +970,7 @@
       }
     }
 
-    // Start demo game
+    // Start quick demo game (random agents)
     async function startDemo() {
       const btn = document.getElementById('demoBtn');
       btn.disabled = true;
@@ -967,19 +980,58 @@
         const response = await fetch('/api/operator/demo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ numAgents: 4, hands: 3 })
+          body: JSON.stringify({ numAgents: 4, hands: 3, speed: 'normal' })
         });
 
         if (!response.ok) {
           throw new Error('Demo failed to start');
         }
 
-        addLogEntry('system', 'Demo game started!');
+        addLogEntry('system', 'Quick demo started (random agents)');
       } catch (e) {
         addLogEntry('system', 'Failed to start demo: ' + e.message);
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Start Demo Game';
+        btn.textContent = 'Quick Demo (Random)';
+      }
+    }
+
+    // Start LLM demo game (Claude-powered agents)
+    async function startLLMDemo() {
+      const btn = document.getElementById('llmDemoBtn');
+      btn.disabled = true;
+      btn.textContent = 'AI Thinking...';
+
+      addLogEntry('system', 'Starting AI demo - Claude agents analyzing the game...');
+
+      try {
+        const response = await fetch('/api/operator/demo-llm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ numAgents: 4, hands: 2 })
+        });
+
+        if (!response.ok) {
+          throw new Error('LLM Demo failed to start');
+        }
+
+        const result = await response.json();
+        addLogEntry('system', 'AI demo complete!');
+
+        // Show final standings in log
+        if (result.results) {
+          addLogEntry('system', '--- FINAL STANDINGS ---');
+          for (const r of result.results) {
+            const profit = BigInt(r.profit);
+            const profitStr = profit >= 0n ? '+$' + formatAmount(profit) : '-$' + formatAmount(-profit);
+            addLogEntry('win', `${r.name} (${r.personality}): $${formatAmount(BigInt(r.stack))} (${profitStr})`);
+          }
+        }
+      } catch (e) {
+        addLogEntry('system', 'Failed to start LLM demo: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'AI Demo (Claude)';
       }
     }
 

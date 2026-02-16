@@ -21,6 +21,7 @@ import { type Player } from '../engine/state.js';
 import { ChipLedger } from '../ledger/chip-ledger.js';
 import { generateChallenge, verifyChallenge, requireAuth } from './auth.js';
 import { authRateLimit, gameRateLimit, queryRateLimit } from './ratelimit.js';
+import { createLLMAgents, type LLMAgent } from '../agents/llm-agent.js';
 
 // Extend Express Request to include authenticated wallet
 declare global {
@@ -907,6 +908,244 @@ app.post('/api/operator/demo', async (req: Request, res: Response) => {
       atTable: player !== null,
     };
   });
+
+  res.json({
+    success: true,
+    agentsPlayed: agentCount,
+    handsPlayed: handCount,
+    results,
+    log,
+    finalPhase: finalState.phase,
+    handNumber: finalState.handNumber,
+  });
+});
+
+// ===========================
+// LLM-POWERED DEMO ENDPOINT
+// ===========================
+
+/**
+ * POST /api/operator/demo-llm - Run a demo with LLM-powered agents
+ *
+ * These agents use Claude to make decisions based on:
+ * - Their cards and hand strength
+ * - Opponent actions and patterns
+ * - Chat messages (bluff detection)
+ * - Pot odds and position
+ *
+ * Optional body:
+ * - numAgents: number of agents (2-6, default 4)
+ * - hands: number of hands to play (1-5, default 2)
+ * - buyIn: buy-in amount (default 1000000)
+ */
+app.post('/api/operator/demo-llm', async (req: Request, res: Response) => {
+  const { numAgents = 4, hands = 2, buyIn = '1000000' } = req.body;
+
+  const agentCount = Math.max(2, Math.min(6, Number(numAgents)));
+  const handCount = Math.max(1, Math.min(5, Number(hands)));
+  const buyInAmount = BigInt(buyIn);
+  const actionDelayMs = 1500; // Slower for dramatic effect
+
+  // Create LLM agents
+  const llmAgents = createLLMAgents().slice(0, agentCount);
+  const log: string[] = [];
+
+  log.push(`Starting LLM demo with ${agentCount} AI agents, ${handCount} hands`);
+  log.push(`Agents: ${llmAgents.map(a => `${a.name} (${a.personality})`).join(', ')}`);
+
+  // Wait for any active hand to complete
+  const activePhasesSet = new Set(['preflop', 'flop', 'turn', 'river', 'showdown']);
+  let clearWait = 0;
+  while (activePhasesSet.has(table.getState().phase) && clearWait < 100) {
+    await new Promise(r => setTimeout(r, 100));
+    clearWait++;
+  }
+
+  // Clear existing players
+  const currentState = table.getState();
+  for (let i = 0; i < currentState.seats.length; i++) {
+    const seat = currentState.seats[i];
+    if (seat) {
+      table.stand(seat.address);
+    }
+  }
+
+  // Deposit and seat agents
+  for (let i = 0; i < llmAgents.length; i++) {
+    const agent = llmAgents[i]!;
+    ledger.confirmDeposit(agent.address, buyInAmount, `llm_demo_${Date.now()}_${agent.name}`);
+    const result = table.sit(agent.address, i, buyInAmount);
+    if (result.success) {
+      log.push(`${agent.name} (${agent.personality}) sits at seat ${i}`);
+    }
+  }
+
+  // Play hands
+  for (let h = 0; h < handCount; h++) {
+    log.push(`\n========== HAND ${h + 1} ==========`);
+
+    // Reset agents for new hand
+    for (const agent of llmAgents) {
+      agent.newHand();
+    }
+
+    // Wait for hand to start
+    let waitCount = 0;
+    while (!activePhasesSet.has(table.getState().phase) && waitCount < 50) {
+      await new Promise(r => setTimeout(r, 100));
+      waitCount++;
+    }
+
+    if (!activePhasesSet.has(table.getState().phase)) {
+      log.push('Timeout waiting for hand to start');
+      continue;
+    }
+
+    // Play the hand
+    const maxActions = 50;
+    let actionCount = 0;
+
+    while (table.getState().phase !== 'waiting' && table.getState().phase !== 'complete' && actionCount < maxActions) {
+      const state = table.getState();
+      const activePos = state.activePosition;
+
+      if (activePos === null) {
+        await new Promise(r => setTimeout(r, 200));
+        continue;
+      }
+
+      const player = table.getPlayerBySeat(activePos);
+      if (!player) {
+        await new Promise(r => setTimeout(r, 200));
+        continue;
+      }
+
+      const agent = llmAgents.find(a => a.address === player.address);
+      if (!agent) {
+        await new Promise(r => setTimeout(r, 200));
+        continue;
+      }
+
+      const validActions = table.getValidActionsFor(player.address);
+      if (!validActions) {
+        await new Promise(r => setTimeout(r, 200));
+        continue;
+      }
+
+      // Build opponent info
+      const opponents = state.seats
+        .filter((s): s is Player => s !== null && s.address !== player.address)
+        .map(s => {
+          const oppAgent = llmAgents.find(a => a.address === s.address);
+          return {
+            name: oppAgent?.name || shortAddr(s.address),
+            stack: s.stack.toString(),
+            currentBet: s.currentBet.toString(),
+            isFolded: s.isFolded,
+            isAllIn: s.isAllIn,
+          };
+        });
+
+      // Calculate position
+      const numPlayers = state.seats.filter(s => s !== null).length;
+      const relativePos = (activePos - state.buttonPosition + numPlayers) % numPlayers;
+      let position: 'early' | 'middle' | 'late' | 'blinds' = 'middle';
+      if (relativePos <= 1) position = 'blinds';
+      else if (relativePos <= numPlayers / 3) position = 'early';
+      else if (relativePos >= numPlayers * 2 / 3) position = 'late';
+
+      // Calculate pot
+      let pot = 0n;
+      for (const seat of state.seats) {
+        if (seat) pot += seat.currentBet;
+      }
+
+      // Get LLM decision
+      log.push(`\n[${state.phase.toUpperCase()}] ${agent.name}'s turn...`);
+      log.push(`Cards: ${player.holeCards?.map(cardDisplay).join(' ') || '??'} | Board: ${state.communityCards.map(cardDisplay).join(' ') || 'none'}`);
+
+      let decision;
+      try {
+        decision = await agent.decide(
+          player.holeCards || [],
+          player.stack.toString(),
+          player.currentBet.toString(),
+          state.communityCards,
+          pot.toString(),
+          state.phase,
+          opponents,
+          validActions,
+          activePos === state.buttonPosition,
+          position
+        );
+      } catch (e) {
+        log.push(`LLM error: ${e}. Defaulting to check/fold.`);
+        decision = { action: validActions.canCheck ? 'check' : 'fold' };
+      }
+
+      if (decision.thinking) {
+        log.push(`Thinking: ${decision.thinking}`);
+      }
+
+      // Execute action
+      const actionResult = table.act(player.address, {
+        type: decision.action as 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'all_in',
+        amount: decision.amount ? BigInt(decision.amount) : 0n,
+      });
+
+      if (actionResult.success) {
+        const amountStr = decision.amount ? ` $${formatAmount(BigInt(decision.amount))}` : '';
+        log.push(`>>> ${agent.name} ${decision.action.toUpperCase()}${amountStr}`);
+
+        // Record action for all agents
+        for (const a of llmAgents) {
+          a.recordAction(agent.name, decision.action, decision.amount, state.phase);
+        }
+      } else {
+        log.push(`Action failed: ${actionResult.error}`);
+      }
+
+      // Send chat if any
+      if (decision.chat) {
+        table.chat(player.address, decision.chat);
+        log.push(`${agent.name} says: "${decision.chat}"`);
+
+        // Record chat for all agents
+        for (const a of llmAgents) {
+          a.recordChat(agent.name, decision.chat);
+        }
+      }
+
+      actionCount++;
+      await new Promise(r => setTimeout(r, actionDelayMs));
+    }
+
+    // Wait between hands
+    await new Promise(r => setTimeout(r, 2000));
+  }
+
+  // Get final results
+  const finalState = table.getState();
+  const results = llmAgents.map(agent => {
+    const player = table.getPlayerByAddress(agent.address);
+    return {
+      name: agent.name,
+      personality: agent.personality,
+      address: agent.address,
+      stack: player?.stack.toString() ?? '0',
+      profit: player ? (player.stack - buyInAmount).toString() : (-buyInAmount).toString(),
+    };
+  });
+
+  // Sort by profit
+  results.sort((a, b) => Number(BigInt(b.profit) - BigInt(a.profit)));
+
+  log.push(`\n========== FINAL STANDINGS ==========`);
+  for (const r of results) {
+    const profitNum = BigInt(r.profit);
+    const profitStr = profitNum >= 0n ? `+$${formatAmount(profitNum)}` : `-$${formatAmount(-profitNum)}`;
+    log.push(`${r.name} (${r.personality}): $${formatAmount(BigInt(r.stack))} (${profitStr})`);
+  }
 
   res.json({
     success: true,
