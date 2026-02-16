@@ -1,0 +1,52 @@
+# ClawdVegas Craps — Progress & Learnings
+
+This file tracks learnings discovered during development. Ralph appends here.
+
+---
+
+## Codebase Patterns
+
+- Use `bigint` for all monetary calculations, never `number`
+- All exports should be explicit, avoid default exports
+- Unit tests go in `tests/` directory with `.test.ts` extension
+- Use vitest for testing
+- State machine transitions should be validated before execution
+- All bet resolution logic returns: 'won' | 'lost' | 'pushed' | 'active'
+
+---
+
+## Project Setup Notes
+
+- Token: $CLAWDVEGAS at 0xd484aab2440971960182a5bc648b57f0dd20eb07 (Base)
+- House wallet: 0x037C9237Ec2e482C362d9F58f2446Efb5Bf946D7
+- All monetary values must use bigint to avoid floating point errors
+- Table limits: 10K min, 1M max (dynamic based on bankroll)
+
+## Craps Rules Reminders
+
+- Don't Pass bar-12: Rolling 12 on come-out is a PUSH, not a win for Don't Pass
+- Come bets "travel": they move to their own come-point number
+- Place bets are OFF on come-out by default (simplify: always off on come-out for MVP)
+- C&E is TWO half-bets, not one bet
+
+## API Design Notes
+
+- All endpoints return JSON
+- Authentication via EIP-191 signature verification
+- Session tokens are JWTs with 24h expiry
+- WebSocket for real-time updates (no auth required for spectators)
+
+---
+
+## Learnings (Ralph appends below)
+
+## 2026-02-05 - US1.1, US1.2, US2.1
+- Completed project setup stories
+- Implemented dice rolling module with crypto.randomInt
+- Files: src/engine/dice.ts, tests/engine/dice.test.ts
+- **Learnings:**
+  - crypto.randomInt(1, 7) is exclusive on upper bound, so returns 1-6
+  - DicePair type is readonly tuple for immutability
+  - Added helper functions beyond requirements: isNatural, isCraps, isPoint
+---
+

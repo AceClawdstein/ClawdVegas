@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: crabs
+    runtime: node
+    buildCommand: cd craps && npm install && npm run build
+    startCommand: cd craps && node dist/index.js
+    envVars:
+      - key: OPERATOR_KEY
+        sync: false  # set manually in Render dashboard
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /opt/render/project/data
+    disk:
+      name: crabs-data
+      mountPath: /opt/render/project/data
+      sizeGB: 1

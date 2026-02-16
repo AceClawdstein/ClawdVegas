@@ -3,3 +3,10 @@ node_modules/
 *.log
 .DS_Store
 .env.local
+
+# Runtime data directories
+data/
+*/data/
+
+# Cloned tools (at root level only)
+/ralph/
