@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Play Texas Molt'em - ClawdVegas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Roboto', system-ui, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background: rgba(0,0,0,0.6);
+      border-bottom: 1px solid #333;
+    }
+
+    .header h1 {
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.2rem;
+      color: #ffd700;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .phase-badge {
+      background: linear-gradient(135deg, #e94560 0%, #c73e54 100%);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    /* Setup Panel */
+    .setup-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      padding: 30px 40px;
+      border-radius: 15px;
+      border: 2px solid #ffd700;
+      z-index: 1000;
+      text-align: center;
+    }
+
+    .setup-panel.hidden { display: none; }
+
+    .setup-panel h2 {
+      font-family: 'Oswald', sans-serif;
+      color: #ffd700;
+      margin-bottom: 20px;
+    }
+
+    .setup-panel label {
+      display: block;
+      margin: 15px 0 5px;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+
+    .setup-panel input, .setup-panel select {
+      width: 100%;
+      padding: 10px;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    .setup-panel button {
+      margin-top: 20px;
+      padding: 12px 30px;
+      background: linear-gradient(145deg, #e94560, #c73e54);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-family: 'Oswald', sans-serif;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .setup-panel button:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Table Area */
+    .table-area {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .poker-table {
+      width: 800px;
+      height: 420px;
+      background: linear-gradient(145deg, #0d5016 0%, #1a7a28 50%, #0d5016 100%);
+      border-radius: 210px;
+      border: 16px solid #5d4037;
+      box-shadow: inset 0 0 60px rgba(0,0,0,0.5), 0 15px 50px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    /* Pot Display */
+    .pot-display {
+      position: absolute;
+      top: 35%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,40,0,0.9);
+      border: 2px solid #2a5a2a;
+      border-radius: 15px;
+      padding: 6px 20px;
+    }
+
+    .pot-amount {
+      font-family: 'Oswald', sans-serif;
+      font-size: 1rem;
+      color: #ffd700;
+    }
+
+    /* Community Cards */
+    .community-cards {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Player Seats */
+    .seat {
+      position: absolute;
+      text-align: center;
+    }
+
+    .seat-0 { bottom: -80px; left: 50%; transform: translateX(-50%); } /* Human - bottom center */
+    .seat-1 { top: 50%; left: -60px; transform: translateY(-50%); }
+    .seat-2 { top: -80px; left: 30%; transform: translateX(-50%); }
+    .seat-3 { top: -80px; right: 30%; transform: translateX(50%); }
+    .seat-4 { top: 50%; right: -60px; transform: translateY(-50%); }
+
+    .seat-info {
+      background: linear-gradient(180deg, #2a2a3a 0%, #1a1a2a 100%);
+      border-radius: 8px;
+      padding: 5px 10px;
+      min-width: 100px;
+      border: 2px solid #333;
+    }
+
+    .seat.active .seat-info {
+      border-color: #ffd700;
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    }
+
+    .seat.folded .seat-info { opacity: 0.5; }
+
+    .seat.human .seat-info {
+      border-color: #4caf50;
+    }
+
+    .seat-avatar {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      margin: 0 auto 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      background: linear-gradient(145deg, #e53935, #b71c1c);
+    }
+
+    .seat.human .seat-avatar {
+      background: linear-gradient(145deg, #4caf50, #2e7d32);
+    }
+
+    .seat-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .seat-stack {
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.85rem;
+      color: #4caf50;
+    }
+
+    .action-badge {
+      position: absolute;
+      top: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: #e65100;
+      color: #fff;
+      display: none;
+    }
+
+    .action-badge.show { display: block; }
+
+    /* Cards */
+    .seat-cards {
+      display: flex;
+      gap: 3px;
+      justify-content: center;
+      margin-bottom: 5px;
+    }
+
+    .card {
+      width: 42px;
+      height: 60px;
+      background: #fff;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    .card.red { color: #e53935; }
+    .card.black { color: #212121; }
+    .card.hidden {
+      background: linear-gradient(145deg, #c62828, #8e0000);
+    }
+
+    .card .rank { font-size: 1rem; }
+    .card .suit { font-size: 1.1rem; }
+
+    .community-cards .card {
+      width: 50px;
+      height: 70px;
+    }
+    .community-cards .card .rank { font-size: 1.2rem; }
+    .community-cards .card .suit { font-size: 1.4rem; }
+
+    /* Human Controls */
+    .controls-panel {
+      background: rgba(0,0,0,0.8);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      border-top: 1px solid #333;
+    }
+
+    .controls-panel.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .action-btn {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-family: 'Oswald', sans-serif;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover { transform: translateY(-2px); }
+    .action-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .action-btn.fold { background: #666; }
+    .action-btn.check { background: #2e7d32; }
+    .action-btn.call { background: #1565c0; }
+    .action-btn.raise { background: #e65100; }
+
+    .raise-input {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .raise-input input {
+      width: 100px;
+      padding: 10px;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    /* Status */
+    .status-bar {
+      background: rgba(0,0,0,0.6);
+      padding: 8px 20px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #ffd700;
+    }
+
+    /* Your cards display */
+    .your-cards {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+    }
+
+    .your-cards .card {
+      width: 70px;
+      height: 100px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    }
+
+    .your-cards .card .rank { font-size: 1.8rem; }
+    .your-cards .card .suit { font-size: 2rem; }
+
+    .your-cards-label {
+      position: fixed;
+      bottom: 205px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Oswald', sans-serif;
+      color: #4caf50;
+      font-size: 0.9rem;
+    }
+
+    /* Winner */
+    .winner-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      padding: 30px 50px;
+      border-radius: 15px;
+      border: 3px solid #ffd700;
+      z-index: 1000;
+      text-align: center;
+      display: none;
+    }
+
+    .winner-overlay.show { display: block; }
+
+    .winner-name { font-family: 'Oswald', sans-serif; font-size: 1.5rem; color: #ffd700; }
+    .win-amount { font-family: 'Oswald', sans-serif; font-size: 1.2rem; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div class="header">
+      <h1>TEXAS MOLT'EM - PLAY vs AI</h1>
+      <div class="header-right">
+        <span>Hand #<span id="handNumber">0</span></span>
+        <span class="phase-badge" id="phase">WAITING</span>
+      </div>
+    </div>
+
+    <!-- Setup Panel -->
+    <div class="setup-panel" id="setupPanel">
+      <h2>Play Against AI</h2>
+      <label>Your Name</label>
+      <input type="text" id="playerName" value="Human Player" />
+      <label>Number of AI Opponents</label>
+      <select id="numOpponents">
+        <option value="1">1 AI Opponent</option>
+        <option value="2">2 AI Opponents</option>
+        <option value="3" selected>3 AI Opponents</option>
+      </select>
+      <label>Starting Stack</label>
+      <select id="buyIn">
+        <option value="10000">$10,000</option>
+        <option value="100000" selected>$100,000</option>
+        <option value="1000000">$1,000,000</option>
+      </select>
+      <button onclick="startGame()">START GAME</button>
+    </div>
+
+    <div class="table-area">
+      <div class="poker-table">
+        <div class="pot-display">
+          <div class="pot-amount">Pot: $<span id="potAmount">0</span></div>
+        </div>
+
+        <div class="community-cards" id="communityCards"></div>
+
+        <div class="seat seat-0 human" id="seat-0"></div>
+        <div class="seat seat-1" id="seat-1"></div>
+        <div class="seat seat-2" id="seat-2"></div>
+        <div class="seat seat-3" id="seat-3"></div>
+        <div class="seat seat-4" id="seat-4"></div>
+
+        <div class="winner-overlay" id="winnerOverlay">
+          <div class="winner-name" id="winnerName"></div>
+          <div class="win-amount" id="winAmount"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="your-cards-label" id="yourCardsLabel" style="display:none">YOUR CARDS</div>
+    <div class="your-cards" id="yourCards"></div>
+
+    <div class="status-bar" id="statusBar">Set up your game above</div>
+
+    <div class="controls-panel disabled" id="controlsPanel">
+      <button class="action-btn fold" onclick="doAction('fold')">FOLD</button>
+      <button class="action-btn check" id="checkBtn" onclick="doAction('check')">CHECK</button>
+      <button class="action-btn call" id="callBtn" onclick="doAction('call')">CALL $0</button>
+      <div class="raise-input">
+        <input type="number" id="raiseAmount" placeholder="Amount" />
+        <button class="action-btn raise" onclick="doAction('raise')">RAISE</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let ws = null;
+    let playerAddress = null;
+    let gameState = {
+      phase: 'waiting',
+      handNumber: 0,
+      activePosition: null,
+      communityCards: [],
+      seats: [null, null, null, null, null],
+      pot: 0,
+      myCards: [],
+      mySeat: 0,
+      validActions: null
+    };
+
+    const AI_NAMES = ['Crabby Carl', 'Shelly Steve', 'Pinchy Pete', 'Clawdia'];
+
+    function formatAmount(amt) {
+      const n = typeof amt === 'string' ? parseInt(amt) : Number(amt);
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000) return (n / 1000).toFixed(0) + 'K';
+      return n.toLocaleString();
+    }
+
+    function getSuitSymbol(s) {
+      return { h: '♥', d: '♦', c: '♣', s: '♠' }[s] || s;
+    }
+
+    function isRed(s) { return s === 'h' || s === 'd'; }
+
+    function displayRank(r) { return r === 'T' ? '10' : r; }
+
+    function renderCard(c, hidden = false) {
+      if (!c || hidden) return '<div class="card hidden"></div>';
+      const col = isRed(c.suit) ? 'red' : 'black';
+      return `<div class="card ${col}"><span class="rank">${displayRank(c.rank)}</span><span class="suit">${getSuitSymbol(c.suit)}</span></div>`;
+    }
+
+    function renderSeat(idx) {
+      const el = document.getElementById(`seat-${idx}`);
+      const seat = gameState.seats[idx];
+
+      if (!seat) {
+        el.innerHTML = `<div class="seat-info"><div class="seat-avatar" style="background:#333;border:2px dashed #444">🦞</div><div class="seat-name">Empty</div></div>`;
+        el.className = `seat seat-${idx}`;
+        return;
+      }
+
+      const isActive = gameState.activePosition === idx;
+      const isFolded = seat.isFolded;
+      const isHuman = seat.isHuman;
+
+      let classes = [`seat`, `seat-${idx}`];
+      if (isActive) classes.push('active');
+      if (isFolded) classes.push('folded');
+      if (isHuman) classes.push('human');
+      el.className = classes.join(' ');
+
+      // Cards - show hidden for AI, show face up for human (via yourCards div)
+      let cardsHtml = '';
+      if (seat.holeCards && seat.holeCards.length > 0 && !isHuman) {
+        cardsHtml = `<div class="seat-cards">${seat.holeCards.map(c => renderCard(c, !seat.showCards)).join('')}</div>`;
+      }
+
+      el.innerHTML = `
+        <div class="action-badge" id="action-badge-${idx}"></div>
+        ${cardsHtml}
+        <div class="seat-info">
+          <div class="seat-avatar">🦞</div>
+          <div class="seat-name">${seat.name}</div>
+          <div class="seat-stack">$${formatAmount(seat.stack)}</div>
+        </div>
+      `;
+    }
+
+    function renderCommunityCards() {
+      const el = document.getElementById('communityCards');
+      el.innerHTML = gameState.communityCards.map(c => renderCard(c)).join('');
+    }
+
+    function renderYourCards() {
+      const el = document.getElementById('yourCards');
+      const label = document.getElementById('yourCardsLabel');
+      if (gameState.myCards && gameState.myCards.length > 0) {
+        el.innerHTML = gameState.myCards.map(c => renderCard(c)).join('');
+        el.style.display = 'flex';
+        label.style.display = 'block';
+      } else {
+        el.innerHTML = '';
+        el.style.display = 'none';
+        label.style.display = 'none';
+      }
+    }
+
+    function calculatePot() {
+      let pot = BigInt(gameState.pot || 0);
+      for (const s of gameState.seats) {
+        if (s && s.currentBet) pot += BigInt(s.currentBet);
+      }
+      return pot;
+    }
+
+    function renderState() {
+      document.getElementById('handNumber').textContent = gameState.handNumber;
+      document.getElementById('phase').textContent = gameState.phase.toUpperCase();
+      document.getElementById('potAmount').textContent = formatAmount(calculatePot().toString());
+
+      for (let i = 0; i < 5; i++) renderSeat(i);
+      renderCommunityCards();
+      renderYourCards();
+    }
+
+    function updateControls() {
+      const panel = document.getElementById('controlsPanel');
+      const v = gameState.validActions;
+
+      if (!v || gameState.activePosition !== gameState.mySeat) {
+        panel.classList.add('disabled');
+        return;
+      }
+
+      panel.classList.remove('disabled');
+
+      document.getElementById('checkBtn').disabled = !v.canCheck;
+      document.getElementById('checkBtn').style.display = v.canCheck ? 'inline-block' : 'none';
+
+      const callBtn = document.getElementById('callBtn');
+      callBtn.disabled = !v.canCall;
+      callBtn.style.display = v.canCall ? 'inline-block' : 'none';
+      if (v.canCall) {
+        callBtn.textContent = `CALL $${formatAmount(v.callAmount)}`;
+      }
+
+      document.getElementById('raiseAmount').placeholder = v.minRaise ? `Min $${formatAmount(v.minRaise)}` : 'Amount';
+    }
+
+    function setStatus(msg) {
+      document.getElementById('statusBar').textContent = msg;
+    }
+
+    function showActionBadge(idx, text, duration = 2000) {
+      const badge = document.getElementById(`action-badge-${idx}`);
+      if (!badge) return;
+      badge.textContent = text;
+      badge.classList.add('show');
+      setTimeout(() => badge.classList.remove('show'), duration);
+    }
+
+    function showWinner(name, amount) {
+      document.getElementById('winnerName').textContent = name + ' WINS!';
+      document.getElementById('winAmount').textContent = '$' + formatAmount(amount);
+      document.getElementById('winnerOverlay').classList.add('show');
+      setTimeout(() => document.getElementById('winnerOverlay').classList.remove('show'), 4000);
+    }
+
+    async function startGame() {
+      const name = document.getElementById('playerName').value || 'Human';
+      const numAI = parseInt(document.getElementById('numOpponents').value);
+      const buyIn = document.getElementById('buyIn').value;
+
+      document.getElementById('setupPanel').classList.add('hidden');
+      setStatus('Starting game...');
+
+      try {
+        const res = await fetch('/api/play/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerName: name, numAI, buyIn })
+        });
+
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+
+        playerAddress = data.playerAddress;
+        gameState.mySeat = data.seatIndex;
+        setStatus('Connecting...');
+        connectWebSocket();
+      } catch (e) {
+        setStatus('Failed to start: ' + e.message);
+        document.getElementById('setupPanel').classList.remove('hidden');
+      }
+    }
+
+    function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.host}?role=player&address=${playerAddress}`);
+
+      ws.onopen = () => setStatus('Connected - waiting for hand to start');
+      ws.onclose = () => setStatus('Disconnected');
+      ws.onerror = () => setStatus('Connection error');
+
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        handleEvent(msg.event, msg.data);
+      };
+    }
+
+    function handleEvent(event, data) {
+      console.log('Event:', event, data);
+
+      switch (event) {
+        case 'connected':
+          if (data.seats) gameState.seats = data.seats;
+          gameState.phase = data.phase || 'waiting';
+          renderState();
+          break;
+
+        case 'player_sat':
+          const isHuman = data.address === playerAddress;
+          gameState.seats[data.seatIndex] = {
+            address: data.address,
+            name: isHuman ? document.getElementById('playerName').value : AI_NAMES[data.seatIndex - 1] || 'AI',
+            stack: data.stack,
+            currentBet: '0',
+            holeCards: null,
+            isFolded: false,
+            isHuman
+          };
+          renderState();
+          break;
+
+        case 'hand_started':
+          gameState.handNumber = data.handNumber;
+          gameState.phase = 'preflop';
+          gameState.communityCards = [];
+          gameState.pot = 0;
+          gameState.myCards = [];
+          for (const s of gameState.seats) {
+            if (s) { s.currentBet = '0'; s.holeCards = null; s.isFolded = false; s.showCards = false; }
+          }
+          setStatus('Hand started - dealing cards...');
+          renderState();
+          break;
+
+        case 'your_cards':
+          gameState.myCards = data.cards;
+          renderYourCards();
+          setStatus('Your cards dealt!');
+          break;
+
+        case 'hole_cards_dealt':
+          if (gameState.seats[data.seatIndex]) {
+            gameState.seats[data.seatIndex].holeCards = data.cards || [{}, {}];
+          }
+          renderSeat(data.seatIndex);
+          break;
+
+        case 'blinds_posted':
+          if (data.smallBlind && gameState.seats[data.smallBlind.seat]) {
+            gameState.seats[data.smallBlind.seat].currentBet = data.smallBlind.amount;
+            showActionBadge(data.smallBlind.seat, 'SB $' + formatAmount(data.smallBlind.amount));
+          }
+          if (data.bigBlind && gameState.seats[data.bigBlind.seat]) {
+            gameState.seats[data.bigBlind.seat].currentBet = data.bigBlind.amount;
+            showActionBadge(data.bigBlind.seat, 'BB $' + formatAmount(data.bigBlind.amount));
+          }
+          renderState();
+          break;
+
+        case 'action_on':
+          gameState.activePosition = data.seatIndex;
+          gameState.validActions = data.validActions;
+          renderState();
+
+          if (data.seatIndex === gameState.mySeat) {
+            setStatus('YOUR TURN - Choose your action');
+          } else {
+            const seat = gameState.seats[data.seatIndex];
+            setStatus(`Waiting for ${seat ? seat.name : 'player'}...`);
+          }
+          updateControls();
+          break;
+
+        case 'player_acted':
+          const seat = gameState.seats[data.seatIndex];
+          let actionText = data.action.toUpperCase();
+          if (data.amount && data.amount !== '0') actionText += ' $' + formatAmount(data.amount);
+          showActionBadge(data.seatIndex, actionText);
+
+          if (seat) {
+            seat.stack = data.newStack;
+            if (data.action === 'fold') { seat.isFolded = true; seat.currentBet = '0'; }
+            else if (data.totalBet) seat.currentBet = data.totalBet;
+          }
+          gameState.activePosition = null;
+          gameState.validActions = null;
+          updateControls();
+          renderState();
+          break;
+
+        case 'flop_dealt':
+          gameState.phase = 'flop';
+          gameState.communityCards = data.cards;
+          collectBetsToPot();
+          setStatus('FLOP dealt');
+          renderState();
+          break;
+
+        case 'turn_dealt':
+          gameState.phase = 'turn';
+          gameState.communityCards.push(data.card);
+          collectBetsToPot();
+          setStatus('TURN dealt');
+          renderState();
+          break;
+
+        case 'river_dealt':
+          gameState.phase = 'river';
+          gameState.communityCards.push(data.card);
+          collectBetsToPot();
+          setStatus('RIVER dealt');
+          renderState();
+          break;
+
+        case 'showdown':
+          gameState.phase = 'showdown';
+          for (const h of data.hands || []) {
+            if (gameState.seats[h.seatIndex]) {
+              gameState.seats[h.seatIndex].holeCards = h.cards;
+              gameState.seats[h.seatIndex].showCards = true;
+            }
+          }
+          setStatus('SHOWDOWN!');
+          renderState();
+          break;
+
+        case 'pot_awarded':
+          collectBetsToPot();
+          for (const w of data.winners || []) {
+            const s = gameState.seats[w.seatIndex];
+            showWinner(s ? s.name : 'Winner', w.amount);
+          }
+          break;
+
+        case 'hand_complete':
+          gameState.phase = 'waiting';
+          gameState.activePosition = null;
+          gameState.pot = 0;
+          setStatus('Hand complete - next hand starting soon...');
+          renderState();
+          break;
+      }
+    }
+
+    function collectBetsToPot() {
+      for (const s of gameState.seats) {
+        if (s && s.currentBet) {
+          gameState.pot = (BigInt(gameState.pot || 0) + BigInt(s.currentBet)).toString();
+          s.currentBet = '0';
+        }
+      }
+    }
+
+    async function doAction(action) {
+      if (!playerAddress || !gameState.validActions) return;
+
+      let amount = '0';
+      if (action === 'raise') {
+        const input = document.getElementById('raiseAmount').value;
+        if (!input) {
+          setStatus('Enter a raise amount');
+          return;
+        }
+        amount = input;
+      } else if (action === 'call' && gameState.validActions.callAmount) {
+        amount = gameState.validActions.callAmount;
+      }
+
+      setStatus('Sending action...');
+      document.getElementById('controlsPanel').classList.add('disabled');
+
+      try {
+        const res = await fetch('/api/play/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: playerAddress, action, amount })
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+          setStatus('Action failed: ' + data.error);
+        }
+      } catch (e) {
+        setStatus('Error: ' + e.message);
+      }
+    }
+  </script>
+</body>
+</html>
