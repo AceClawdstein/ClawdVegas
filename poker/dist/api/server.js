@@ -1056,26 +1056,289 @@ app.post('/api/operator/demo-llm', async (req, res) => {
         handNumber: finalState.handNumber,
     });
 });
+let playSession = null;
+let playActionResolve = null;
+/**
+ * POST /api/play/start - Start a human vs AI game
+ *
+ * Body:
+ * - playerName: string (human's display name)
+ * - numAI: number (1-4 AI opponents)
+ * - buyIn: string (starting stack, default 100000)
+ */
+app.post('/api/play/start', async (req, res) => {
+    const { playerName = 'Human Player', numAI = 3, buyIn = '100000' } = req.body;
+    const aiCount = Math.max(1, Math.min(4, Number(numAI)));
+    const buyInAmount = BigInt(buyIn);
+    // Create human player address
+    const humanAddress = `0xHUMAN${Date.now().toString(16).toUpperCase()}`;
+    // Wait for any active hand to complete
+    const activePhasesSet = new Set(['preflop', 'flop', 'turn', 'river', 'showdown']);
+    let clearWait = 0;
+    while (activePhasesSet.has(table.getState().phase) && clearWait < 100) {
+        await new Promise(r => setTimeout(r, 100));
+        clearWait++;
+    }
+    // Clear existing players
+    const currentState = table.getState();
+    for (let i = 0; i < currentState.seats.length; i++) {
+        const seat = currentState.seats[i];
+        if (seat) {
+            table.stand(seat.address);
+        }
+    }
+    // Create AI agents
+    const allAgents = createLLMAgents();
+    const aiAgents = allAgents.slice(0, aiCount);
+    // Deposit and seat human at seat 0
+    ledger.confirmDeposit(humanAddress, buyInAmount, `play_human_${Date.now()}`);
+    const humanSitResult = table.sit(humanAddress, 0, buyInAmount);
+    if (!humanSitResult.success) {
+        res.status(400).json({ error: humanSitResult.error });
+        return;
+    }
+    // Deposit and seat AI opponents at seats 1+
+    for (let i = 0; i < aiAgents.length; i++) {
+        const agent = aiAgents[i];
+        ledger.confirmDeposit(agent.address, buyInAmount, `play_ai_${Date.now()}_${agent.name}`);
+        table.sit(agent.address, i + 1, buyInAmount);
+    }
+    // Store play session
+    playSession = {
+        humanAddress,
+        humanName: playerName,
+        humanSeat: 0,
+        aiAgents,
+        isActive: true,
+    };
+    // Start the AI action loop in the background
+    runPlaySession().catch(err => {
+        console.error('Play session error:', err);
+    });
+    res.json({
+        success: true,
+        playerAddress: humanAddress,
+        seatIndex: 0,
+        numOpponents: aiCount,
+        buyIn: buyInAmount.toString(),
+    });
+});
+/**
+ * POST /api/play/action - Human player takes an action
+ *
+ * Body:
+ * - address: string (player address)
+ * - action: 'fold' | 'check' | 'call' | 'bet' | 'raise'
+ * - amount?: string (for bet/raise)
+ */
+app.post('/api/play/action', (req, res) => {
+    const { address, action, amount } = req.body;
+    if (!address || !action) {
+        res.status(400).json({ error: 'Missing address or action' });
+        return;
+    }
+    if (!playSession || playSession.humanAddress !== address) {
+        res.status(400).json({ error: 'Not in an active play session' });
+        return;
+    }
+    // Check if it's human's turn
+    const state = table.getState();
+    if (state.activePosition !== playSession.humanSeat) {
+        res.status(400).json({ error: 'Not your turn' });
+        return;
+    }
+    // Execute the action directly
+    let playerAction;
+    try {
+        playerAction = {
+            type: action,
+            amount: amount ? BigInt(amount) : 0n,
+        };
+    }
+    catch {
+        res.status(400).json({ error: 'Invalid amount' });
+        return;
+    }
+    const result = table.act(address, playerAction);
+    if (!result.success) {
+        res.status(400).json({ error: result.error });
+        return;
+    }
+    res.json({
+        success: true,
+        action: result.data.action.type,
+        amount: result.data.action.amount.toString(),
+    });
+});
+/**
+ * Run the play session - AI acts automatically, waits for human
+ */
+async function runPlaySession() {
+    if (!playSession)
+        return;
+    const activePhasesSet = new Set(['preflop', 'flop', 'turn', 'river', 'showdown']);
+    while (playSession?.isActive) {
+        // Wait for an active phase
+        while (!activePhasesSet.has(table.getState().phase)) {
+            await new Promise(r => setTimeout(r, 200));
+            if (!playSession?.isActive)
+                return;
+        }
+        // Reset agents for new hand
+        for (const agent of playSession.aiAgents) {
+            agent.newHand();
+        }
+        // Play the hand
+        const maxActions = 100;
+        let actionCount = 0;
+        while (table.getState().phase !== 'waiting' && table.getState().phase !== 'complete' && actionCount < maxActions) {
+            if (!playSession?.isActive)
+                return;
+            const state = table.getState();
+            const activePos = state.activePosition;
+            if (activePos === null) {
+                await new Promise(r => setTimeout(r, 200));
+                continue;
+            }
+            const player = table.getPlayerBySeat(activePos);
+            if (!player) {
+                await new Promise(r => setTimeout(r, 200));
+                continue;
+            }
+            // Is it the human's turn?
+            if (player.address === playSession.humanAddress) {
+                // Wait for human to act via /api/play/action
+                // We just poll until it's not their turn anymore
+                while (playSession?.isActive &&
+                    table.getState().activePosition === activePos &&
+                    table.getState().phase !== 'waiting' &&
+                    table.getState().phase !== 'complete') {
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                continue;
+            }
+            // AI's turn
+            const agent = playSession.aiAgents.find(a => a.address === player.address);
+            if (!agent) {
+                await new Promise(r => setTimeout(r, 200));
+                continue;
+            }
+            const validActions = table.getValidActionsFor(player.address);
+            if (!validActions) {
+                await new Promise(r => setTimeout(r, 200));
+                continue;
+            }
+            // Build opponent info
+            const opponents = state.seats
+                .filter((s) => s !== null && s.address !== player.address)
+                .map(s => {
+                const oppAgent = playSession.aiAgents.find(a => a.address === s.address);
+                const isHuman = s.address === playSession.humanAddress;
+                return {
+                    name: isHuman ? playSession.humanName : (oppAgent?.name || shortAddr(s.address)),
+                    stack: s.stack.toString(),
+                    currentBet: s.currentBet.toString(),
+                    isFolded: s.isFolded,
+                    isAllIn: s.isAllIn,
+                };
+            });
+            // Calculate position
+            const numPlayers = state.seats.filter(s => s !== null).length;
+            const relativePos = (activePos - state.buttonPosition + numPlayers) % numPlayers;
+            let position = 'middle';
+            if (relativePos <= 1)
+                position = 'blinds';
+            else if (relativePos <= numPlayers / 3)
+                position = 'early';
+            else if (relativePos >= numPlayers * 2 / 3)
+                position = 'late';
+            // Calculate pot
+            let pot = 0n;
+            for (const seat of state.seats) {
+                if (seat)
+                    pot += seat.currentBet;
+            }
+            // Simulate some thinking time
+            await new Promise(r => setTimeout(r, 800 + Math.random() * 1200));
+            // Get AI decision
+            let decision;
+            try {
+                decision = await agent.decide(player.holeCards || [], player.stack.toString(), player.currentBet.toString(), state.communityCards, pot.toString(), state.phase, opponents, validActions, activePos === state.buttonPosition, position);
+            }
+            catch (e) {
+                console.error(`AI ${agent.name} decision error:`, e);
+                decision = { action: validActions.canCheck ? 'check' : 'fold' };
+            }
+            // Execute action
+            const actionResult = table.act(player.address, {
+                type: decision.action,
+                amount: decision.amount ? BigInt(decision.amount) : 0n,
+            });
+            if (actionResult.success) {
+                // Record action for all agents
+                for (const a of playSession.aiAgents) {
+                    a.recordAction(agent.name, decision.action, decision.amount, state.phase);
+                }
+            }
+            // Send chat if any
+            if (decision.chat && actionResult.success) {
+                table.chat(player.address, decision.chat);
+                for (const a of playSession.aiAgents) {
+                    a.recordChat(agent.name, decision.chat);
+                }
+            }
+            actionCount++;
+        }
+        // Wait between hands
+        await new Promise(r => setTimeout(r, 3000));
+    }
+}
+/**
+ * POST /api/play/stop - Stop the current play session
+ */
+app.post('/api/play/stop', (_req, res) => {
+    if (playSession) {
+        playSession.isActive = false;
+        playSession = null;
+    }
+    res.json({ success: true });
+});
 // ===========================
 // WebSocket handling
 // ===========================
 wss.on('connection', (ws, req) => {
     const url = new URL(req.url ?? '', `http://${req.headers.host}`);
     const role = url.searchParams.get('role') === 'player' ? 'player' : 'spectator';
-    const token = url.searchParams.get('token');
+    const address = url.searchParams.get('address'); // For play mode connections
     const client = { ws, role };
-    // For player connections, we'd validate the JWT here
-    // For now, simplified - players connect as spectators unless they have valid token
+    if (address)
+        client.address = address;
     wsClients.add(client);
     // Send current state
+    // For play mode players, they see public state initially
+    // For spectators, they see all (for demo watching)
     const state = role === 'spectator'
-        ? table.getState() // Spectators see all
-        : table.getPublicState(); // Players see public until we validate
+        ? table.getState() // Spectators see all cards
+        : table.getPublicState(); // Players see public state
     ws.send(JSON.stringify({
         event: 'connected',
         data: serializeState(state, role === 'spectator'),
         ts: Date.now(),
     }));
+    // If this is a play mode player, send their current hole cards if they have any
+    if (address && playSession && address === playSession.humanAddress) {
+        const player = table.getPlayerByAddress(address);
+        if (player?.holeCards) {
+            ws.send(JSON.stringify({
+                event: 'your_cards',
+                data: {
+                    seatIndex: player.seatIndex,
+                    cards: player.holeCards.map(c => ({ rank: c.rank, suit: c.suit, display: cardDisplay(c) })),
+                },
+                ts: Date.now(),
+            }));
+        }
+    }
     ws.on('close', () => {
         wsClients.delete(client);
     });
