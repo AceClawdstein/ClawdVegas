@@ -547,6 +547,131 @@
       0% { transform: translateX(-50%) scale(0.8); }
       100% { transform: translateX(-50%) scale(1); }
     }
+
+    /* Chat/Log Sidebar */
+    .sidebar {
+      position: fixed;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 280px;
+      background: rgba(0,0,0,0.9);
+      border-left: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar-toggle {
+      position: fixed;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0,0,0,0.8);
+      border: 1px solid #444;
+      color: #fff;
+      padding: 10px 8px;
+      border-radius: 8px 0 0 8px;
+      cursor: pointer;
+      z-index: 1001;
+      font-size: 0.8rem;
+      writing-mode: vertical-rl;
+      transition: right 0.3s ease;
+    }
+
+    .sidebar.open + .sidebar-toggle {
+      right: 290px;
+    }
+
+    .sidebar-header {
+      padding: 12px 15px;
+      background: #1a1a2e;
+      border-bottom: 1px solid #333;
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.9rem;
+      color: #ffd700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sidebar-tabs {
+      display: flex;
+      border-bottom: 1px solid #333;
+    }
+
+    .sidebar-tab {
+      flex: 1;
+      padding: 8px;
+      background: transparent;
+      border: none;
+      color: #666;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .sidebar-tab.active {
+      color: #fff;
+      background: rgba(255,255,255,0.1);
+      border-bottom: 2px solid #e94560;
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .log-entry {
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      background: rgba(255,255,255,0.05);
+    }
+
+    .log-entry.action { border-left: 3px solid #e94560; }
+    .log-entry.phase { border-left: 3px solid #ffd700; background: rgba(255,215,0,0.1); }
+    .log-entry.chat { border-left: 3px solid #4caf50; }
+    .log-entry.system { border-left: 3px solid #666; color: #888; }
+
+    .log-time {
+      color: #666;
+      font-size: 0.65rem;
+      margin-right: 5px;
+    }
+
+    .chat-input-area {
+      padding: 10px;
+      border-top: 1px solid #333;
+      display: none;
+    }
+
+    .chat-input-area.show {
+      display: block;
+    }
+
+    .chat-input {
+      width: 100%;
+      padding: 8px;
+      background: #1a1a2e;
+      border: 1px solid #333;
+      border-radius: 4px;
+      color: #fff;
+      font-size: 0.8rem;
+    }
+
+    /* Adjust table area when sidebar is open */
+    .table-view.sidebar-open .table-area {
+      margin-right: 280px;
+    }
   </style>
 </head>
 <body>
@@ -594,6 +719,20 @@
         </div>
       </div>
     </div>
+
+    <!-- Chat/Log Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span>Activity Log</span>
+      </div>
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab active" onclick="switchTab('all')">All</button>
+        <button class="sidebar-tab" onclick="switchTab('chat')">Chat</button>
+        <button class="sidebar-tab" onclick="switchTab('actions')">Actions</button>
+      </div>
+      <div class="sidebar-content" id="logContent"></div>
+    </div>
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">LOG</button>
 
     <div class="controls-bar">
       <select class="speed-select" id="speedSelect">
@@ -951,6 +1090,7 @@
               isAllIn: false
             };
             gameState.initialStacks[data.address] = data.stack;
+            addLogEntry('system', `<b>${getPlayerName(data.address)}</b> joined at seat ${data.seatIndex}`);
             renderState();
           }, 300);
           break;
@@ -977,6 +1117,7 @@
                 seat.isAllIn = false;
               }
             }
+            addLogEntry('phase', `<b>Hand #${data.handNumber}</b> started`);
             renderState();
           }, 500);
           break;
@@ -1019,11 +1160,16 @@
         case 'player_acted':
           queueEvent(() => {
             const seatIdx = data.seatIndex;
+            const seat = gameState.seats[seatIdx];
+            const playerName = seat ? getPlayerName(seat.address) : 'Player';
             let actionText = data.action.toUpperCase();
 
             if (data.amount && data.amount !== '0' && !['fold', 'check'].includes(data.action)) {
               actionText += ' $' + formatAmount(data.amount);
             }
+
+            // Log the action
+            addLogEntry('action', `<b>${playerName}</b> ${actionText}`);
 
             // Show action badge FIRST
             showActionBadge(seatIdx, actionText, 2500);
@@ -1054,6 +1200,8 @@
             gameState.phase = 'flop';
             gameState.communityCards = data.cards;
             collectBetsToPot();
+            const flopStr = data.cards.map(c => displayRank(c.rank) + getSuitSymbol(c.suit)).join(' ');
+            addLogEntry('phase', `<b>FLOP:</b> ${flopStr}`);
             document.getElementById('phase').textContent = 'FLOP';
             document.getElementById('potAmount').textContent = formatAmount(calculatePot().toString());
             renderCommunityCards(true);
@@ -1067,6 +1215,7 @@
             gameState.phase = 'turn';
             gameState.communityCards.push(data.card);
             collectBetsToPot();
+            addLogEntry('phase', `<b>TURN:</b> ${displayRank(data.card.rank)}${getSuitSymbol(data.card.suit)}`);
             document.getElementById('phase').textContent = 'TURN';
             document.getElementById('potAmount').textContent = formatAmount(calculatePot().toString());
             renderCommunityCards(true);
@@ -1080,6 +1229,7 @@
             gameState.phase = 'river';
             gameState.communityCards.push(data.card);
             collectBetsToPot();
+            addLogEntry('phase', `<b>RIVER:</b> ${displayRank(data.card.rank)}${getSuitSymbol(data.card.suit)}`);
             document.getElementById('phase').textContent = 'RIVER';
             document.getElementById('potAmount').textContent = formatAmount(calculatePot().toString());
             renderCommunityCards(true);
@@ -1107,6 +1257,9 @@
             let winHandName = '';
             for (const winner of data.winners || []) {
               winHandName = winner.handName || '';
+              const seat = gameState.seats[winner.seatIndex];
+              const name = seat ? getPlayerName(seat.address) : 'Winner';
+              addLogEntry('phase', `<b>${name}</b> wins $${formatAmount(winner.amount)} with ${winHandName}`);
             }
             showWinner(data.winners, winHandName);
           }, 500);
@@ -1131,6 +1284,8 @@
         case 'chat':
           queueEvent(() => {
             const chatSeatIndex = gameState.seats.findIndex(s => s && s.address === data.address);
+            const playerName = getPlayerName(data.address);
+            addLogEntry('chat', `<b>${playerName}:</b> "${data.message}"`);
             if (chatSeatIndex !== -1) {
               showChatBubble(chatSeatIndex, data.message, 3500);
             }
@@ -1184,11 +1339,60 @@
     }
 
     // ==========================================
+    // SIDEBAR / LOG
+    // ==========================================
+    let currentLogFilter = 'all';
+    const logEntries = [];
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const tableView = document.querySelector('.table-view');
+      sidebar.classList.toggle('open');
+      tableView.classList.toggle('sidebar-open');
+    }
+
+    function switchTab(tab) {
+      currentLogFilter = tab;
+      document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      renderLog();
+    }
+
+    function addLogEntry(type, message) {
+      const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      logEntries.push({ type, message, time });
+      if (logEntries.length > 100) logEntries.shift(); // Keep last 100
+      renderLog();
+    }
+
+    function renderLog() {
+      const content = document.getElementById('logContent');
+      const filtered = currentLogFilter === 'all'
+        ? logEntries
+        : logEntries.filter(e => {
+            if (currentLogFilter === 'chat') return e.type === 'chat';
+            if (currentLogFilter === 'actions') return e.type === 'action' || e.type === 'phase';
+            return true;
+          });
+
+      content.innerHTML = filtered.map(e => `
+        <div class="log-entry ${e.type}">
+          <span class="log-time">${e.time}</span>
+          ${e.message}
+        </div>
+      `).join('');
+
+      content.scrollTop = content.scrollHeight;
+    }
+
+    // ==========================================
     // INIT
     // ==========================================
     document.addEventListener('DOMContentLoaded', () => {
       renderState();
       connectWebSocket();
+      // Auto-open sidebar
+      toggleSidebar();
     });
   </script>
 </body>
